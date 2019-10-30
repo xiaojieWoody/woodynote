@@ -1211,17 +1211,120 @@ public class ConcurrentExecutor {
 }
 ```
 
-# 其他
+# 反射
 
 ```java
+// 简单工厂模式
+public ICourse create(Class<? extends ICourse> clazz){ 
+  try {
+		if (null != clazz) {
+			return clazz.newInstance();
+		}
+    }catch (Exception e){
+       e.printStackTrace();
+    }
+			return null;
+}
+
+public static void main(String[] args) { 
+  CourseFactory factory = new CourseFactory(); 
+  ICourse course = factory.create(JavaCourse.class); 
+  course.record();
+}
+```
+
+# JSON
+
+```java
+// json文件 -> json对象 -> 字符串 -> list
+String jsonStr = JSON.toJSONString(JSON.parse(file.getBytes()));
+List<ResDataVO> resData = JSON.parseObject(jsonStr, new TypeReference<List<ResDataVO>>(){});
+// json字符串 转 json对象
+// json字符串 转 java对象
+ResDataVO res = JSON.parseObject(String.valueOf(obj), ResDataVO.class);
+ResDataVO resDataVO = JSONObject.parseObject(String.valueOf(obj), ResDataVO.class);
+// Object 转 JSONObject
+(JSONObject) JSONObject.toJSON(obj);
+// Java对象 转 json字符串
+String jsonStr = JSON.toJSONString(obj);
+// null
 Object obj = null;
 JSONObject object = (JSONObject)obj;  // null
-
-// Object 转 JSONObject
-(JSONObject) JSONObject.toJSON(obj)
-  
-// json文件转list
-String jsonStr = JSON.toJSONString(JSON.parse(file.getBytes()));
-resData = JSON.parseObject(jsonStr, new TypeReference<List<ResDataVO>>(){});
+//
+JSONObject jsonObj = new JSONObject(jsonStr);
+ExamPaper examPaper = JSONObject.parseObject(parameters,ExamPaper.class);
 ```
+
+# 其他
+
+* jdbc
+
+  ```java
+  public void save(Student stu){
+  	String sql="INSERT INTO t_student(name,age) VALUES(?,?)"; 
+    Connection conn=null;
+  	Statement st=null;
+  	try{
+  		// 1. 加载注册驱动
+  		Class.forName("com.mysql.jdbc.Driver");
+  		// 2. 获取数据库连接 
+      conn=DriverManager.getConnection("jdbc:mysql:///jdbcdemo","root","root"); 
+      // 3. 创建语句对象
+  		PreparedStatement ps=conn.prepareStatement(sql); 
+      ps.setObject(1,stu.getName());
+  		ps.setObject(2,stu.getAge());
+  		// 4. 执行 SQL 语句
+  		ps.executeUpdate();
+  		// 5. 释放资源
+    }catch(Exception e){
+         e.printStackTrace();
+      }finally{
+         try{
+             if(st!=null)
+                st.close();
+  			  }catch(SQLException e){ 
+           	e.printStackTrace();
+          }finally{
+             try{
+                 if(conn!=null)
+                    conn.close();
+  						}catch(SQLException e){ 
+               		e.printStackTrace();
+  						} 
+         }
+  		} 
+  }
+  ```
+
+* JdbcTemplate
+
+  ```java
+  // 增加
+  String sql = "INSERT INTO t_student(name,age) VALUES(?,?)"; 
+  Object[] params=new Object[]{stu.getName(),stu.getAge()}; 
+  JdbcTemplate.update(sql, params);
+  // 删除
+  String sql = "DELETE FROM t_student WHERE id = ?";
+  JdbcTemplate.update(sql, id);
+  // 修改
+  String sql = "UPDATE t_student SET name = ?,age = ? WHERE id = ?"; 
+  Object[] params=new Object[]{stu.getName(),stu.getAge(),stu.getId()}; JdbcTemplate.update(sql, params);
+  // 查询
+  String sql = "SELECT * FROM t_student WHERE id=?"; 
+  List<Student> list = JDBCTemplate.query(sql, id); 
+  return list.size()>0? list.get(0):null;
+  // 查询
+  String sql = "SELECT * FROM t_student "; 
+  List<Student> list = JDBCTemplate.query(sql);
+  ```
+
+* 获取properties中属性值
+
+  ```java
+  ClassLoader loader = Thread.currentThread().getContextClassLoader(); 
+  InputStream inputStream = loader.getResourceAsStream("db.properties"); 
+  p = new Properties();
+  p.load(inputStream);
+  p.getProperty("driverClassName");
+  ```
 
