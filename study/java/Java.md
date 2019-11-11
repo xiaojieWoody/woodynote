@@ -59,33 +59,31 @@
 
     - @FunctionalInterface标记的接口且只有一个抽象方法
 
-  * 可以使用lambda表达式创建函数接口的实例`(argument) -> (body)`
+    * 可以使用lambda表达式创建函数接口的实例`(argument) -> (body)`
 
-  * 简化代码；支持Stream API
+    - 简化代码；支持Stream API
 
-  * Stream API
-
+      * Stream API
     - 不存储数据，操作源数据结构，产生并使用管道数据，实现具体的操作
-    - 基于条件的从list和filter中创建Stream，使用函数接口
+        - 基于条件的从list和filter中创建Stream，使用函数接口
+        - Collection的forEach()方法，接收Consumer参数，使用lambda表达式
 
-    ```java
-    private static int sumIterator(List<Integer> list) {
-    	Iterator<Integer> it = list.iterator();
-    	int sum = 0;
-    	while (it.hasNext()) {
-    		int num = it.next();
-    		if (num > 10) {
-    			sum += num;
-    		}
-    	}
-    	return sum;
-    }
-    
-    private static int sumStream(List<Integer> list) {
-    	return list.stream().filter(i -> i > 10).mapToInt(i -> i).sum();
-    }
-    ```
-    * Collection的forEach()方法，接收Consumer参数，使用lambda表达式
+* 为什么String是不可变的？
+  * final修饰、不可变
+    * 使字符串常量池成为可能，能够节省很多堆空间，因为不同的String变量可引用池中相同String变量
+    * 可避免使用过程中一些敏感信息被修改，一旦被修改了就不是原来的String
+    * 多线程环境下可共享而不用采取额外的线程同步机制
+    * String的哈希码在创建时被缓存，不需要再次计算，它的处理速度比其他HashMap键对象快
+* 全局唯一有序 ID
+  * UUID：无序32位数的16进制数字所构成
+  * snowFlake雪花算法：64位的二进制Long型正整数，按照时间自增排序，效率高
+  * redis：单线程的Redis实现了一个原子操作`INCR`和`INCRBY`实现递增的操作
+* 冯诺依曼体系
+
+  *  计算机处理的数据和指令一律用二进制数表示
+  *  顺序执行程序
+     *  计算机运行时，把要执行的程序和处理的数据首先存入主存储器（内存），在执行程序时，将自动按顺序从主存储器中取出指令一条一条地执行
+  *  计算机硬件由运算器、控制器、存储器、输入设备和输出设备五大部分组成
 
 # 经验
 

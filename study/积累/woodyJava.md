@@ -1255,6 +1255,64 @@ JSONObject jsonObj = new JSONObject(jsonStr);
 ExamPaper examPaper = JSONObject.parseObject(parameters,ExamPaper.class);
 ```
 
+# Lambda
+
+* list属性值求和
+
+  ```java
+  int accessCount = resList.stream().mapToInt(XDIndictorInfoRelease::getAccess).sum();
+  ```
+
+* 获取list某个属性
+
+  ```java
+  Set<String> dataId = resList.stream().map(XDIndictorInfoRelease::getDataid).collect(Collectors.toSet());
+  ```
+
+* 提取某List对象中的几个几个属性去组成另一个List对象
+
+  ```java
+  List<DecreaseStockInput> decreaseStockInputList = orderDTO.getOrderDetailList().stream()
+    .map(e -> new DecreaseStockInput(e.getProductId(), e.getProductQuantity()))
+    .collect(Collectors.toList());
+  ```
+
+* foreach设置属性值
+
+  ```java
+  productInfoPage.getContent().stream().forEach(e -> e.addImageHost(upYunConfig.getImageHost()));
+  ```
+
+* list转字符串
+
+  ```java
+  String collect = list.stream().collect(Collectors.joining(","));
+  // 或
+  String joinStr = String.join(",", roleNames);
+  ```
+
+* 条件判断并求和
+
+  ```java
+  list.stream().filter(i -> i > 10).mapToInt(i -> i).sum();
+  ```
+
+  
+
+# 加解密
+
+* [md5](https://blog.csdn.net/junmoxi/article/details/80841555)
+* [sm2、3、4](https://github.com/xjfme/SM2_SM3_SM4Encrypt)
+* [aes](https://blog.csdn.net/u011781521/article/details/77932321)
+* [rsa](https://blog.csdn.net/defonds/article/details/42775183)
+
+# File
+
+```java
+File directory = new File("");
+sString workspacePath = directory.getCanonicalPath(); //获取工作空间的绝对路径
+```
+
 # 其他
 
 * jdbc
