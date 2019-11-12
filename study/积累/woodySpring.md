@@ -6,60 +6,88 @@
 
 # 经验
 
-# 
+
 
 # Spring
 
 # SpringBoot
 
-## SpringBoot + 导入文件
+## 记录日志-aop
 
-```html
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-thymeleaf</artifactId>
-</dependency>
-  
-<!--application.properties-->
-spring.thymeleaf.prefix=classpath:/templates/  
-  
-<!--resources/templates/index.html-->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>运维管理-文件导入</title>
-</head>
-<body>
-<h1>资源导入</h1>
-<form action="import" id="upfile" method="post" enctype="multipart/form-data">
-    <input type="file" name="file"/>
-    <input type="submit" value="提交">
-</form>
-</body>
-</html>  
+```java
+// 操作日志
+package com.efast.gac.dtp.bean.core;
+@Inherited
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.METHOD})
+public @interface OperationLog {
+    // 操作名称，如"下载"
+    String value() default "";
+    // 被修改的实体的唯一标识,例如:菜单实体的唯一标识为"id"
+    String key() default "id";
+}
 ```
 
 ```java
-@GetMapping("/index")
-public String index() {
-  return "index";
-}
+@Aspect
+@Component
+@Slf4j
+public class OperationLogAOP {
 
-@PostMapping("/import")
-@ResponseBody
-public ResponseResult fileImport(@RequestParam("file")MultipartFile file) {
-  String originalFilename = file.getOriginalFilename();
-  public ResponseResult resolveResJsonFile(MultipartFile file) {
-    try {
-      // file文件中内容 解析 成List对象
-      String jsonStr = JSON.toJSONString(JSON.parse(file.getBytes()));
-      List<ResDataVO> resDataVOS = JSON.parseObject(jsonStr, new TypeReference<List<ResDataVO>>() {
-      });
-    } catch (IOException e) {
-      e.printStackTrace();
+    @Pointcut(value = "@annotation(com.efast.gac.dtp.bean.core.OperationLog)")
+    public void operationLog() {
     }
-  return new ResponseResult(200, "success", "success", originalFilename);
+
+    @Around("operationLog()")
+    public Object before(ProceedingJoinPoint point) throws Throwable {
+        // 先执行业务
+        Object result = point.proceed();
+        try {
+            // 记录日志
+            handler(point);
+        } catch (Exception e) {
+            log.error("记录操作日志异常:{}", e);
+        }
+        return result;
+    }
+
+    private void handler(ProceedingJoinPoint point) throws NoSuchMethodException {
+        // 获取拦截的方法名
+        Signature signature = point.getSignature();
+        MethodSignature sig = null;
+        if (!(signature instanceof MethodSignature)) {
+            throw new IllegalArgumentException("该注解只能用于方法");
+        }
+        sig = (MethodSignature) signature;
+        // 反射获取方法名
+        Class<?> clazz = point.getTarget().getClass();
+        Method currentMethod = clazz.getMethod(sig.getName(), sig.getParameterTypes());
+        // 获取方法上的注解
+        OperationLog annotation = currentMethod.getAnnotation(OperationLog.class);
+        // 操作名称
+        String operation = annotation.value();
+        // 获取用户token
+        HttpServletRequest request = HttpKit.getRequest();
+        // 获取请求参数
+        String issuedId = request.getParameter("issuedId");
+        if (StringUtils.isNullOrEmpty(issuedId)) {
+            log.error("【操作日志】请求参数issuedId为null");
+            return;
+        }
+        String token = request.getHeader("Authorization");
+        String username = JwtUtil.getUsername(token);
+        Long userId = JwtUtil.getUserId(token);
+
+        // 查询用户
+        User user = userService.findById(userId);
+        if (user == null) {
+            log.error("【操作日志】用户不存在");
+            return;
+        }
+        // 用户角色名称
+        String userRoleName = getUserRoleName(user);
+        // 插入数据库
+    }
 }
 ```
 

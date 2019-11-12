@@ -1269,7 +1269,7 @@ ExamPaper examPaper = JSONObject.parseObject(parameters,ExamPaper.class);
   Set<String> dataId = resList.stream().map(XDIndictorInfoRelease::getDataid).collect(Collectors.toSet());
   ```
 
-* 提取某List对象中的几个几个属性去组成另一个List对象
+* 提取某List对象中的几个属性去组成另一个List对象
 
   ```java
   List<DecreaseStockInput> decreaseStockInputList = orderDTO.getOrderDetailList().stream()
@@ -1291,13 +1291,79 @@ ExamPaper examPaper = JSONObject.parseObject(parameters,ExamPaper.class);
   String joinStr = String.join(",", roleNames);
   ```
 
-* 条件判断并求和
+* filter
 
   ```java
+  // 条件判断并求和
   list.stream().filter(i -> i > 10).mapToInt(i -> i).sum();
+// 创建一个字符串列表，每个字符串长度大于2
+  List<String> filtered = strList.stream().filter(x -> x.length()> 2).collect(Collectors.toList());
+  ```
+  
+* 最大值、最小值、平均值、总和
+
+  ```java
+  //获取数字的个数、最小值、最大值、总和以及平均值
+  List<Integer> primes = Arrays.asList(2, 3, 5, 7, 11, 13, 17, 19, 23, 29);
+  IntSummaryStatistics stats = primes.stream().mapToInt((x) -> x).summaryStatistics();
+  System.out.println("Highest prime number in List : " + stats.getMax());
+  System.out.println("Lowest prime number in List : " + stats.getMin());
+  System.out.println("Sum of all prime numbers : " + stats.getSum());
+  System.out.println("Average of all prime numbers : " + stats.getAverage());
   ```
 
+* 实现runnable
+
+  ```java
+  new Thread( () -> System.out.println("In Java8, Lambda expression rocks !!") ).start();
+  ```
+
+* 处理事件
+
+  ```java
+  show.addActionListener((e) -> {
+      System.out.println("Light, Camera, Action !! Lambda expressions Rocks");
+  });
+  ```
+
+* 迭代
+
+  ```java
+  List features = Arrays.asList("Lambdas", "Default Method", "Stream API", "Date and Time API");
+  features.forEach(n -> System.out.println(n));
+  //features.forEach(System.out::println);
+  ```
+
+* 与**Predicate**接口配合，**Predicate**接口适合过滤
+
+  ```java
+  // 可以用and()、or()逻辑函数来合并Predicate
+  // 例如要找到所有以J开始，长度为四个字母的名字，可合并两个Predicate并传入
+  Predicate<String> startsWithJ = (n) -> n.startsWith("J");
+  Predicate<String> fourLetterLong = (n) -> n.length() == 4;
+  names.stream()
+      .filter(startsWithJ.and(fourLetterLong))
+      .forEach((n) -> System.out.print("nName, which starts with 'J' and four letter long is : " + n)); 
+  ```
+
+* map允许将对象进行转换，**reduce()** 函数可以将所有值合并成一个
+
+  ```java
+  List costBeforeTax = Arrays.asList(100, 200, 300, 400, 500);
+  costBeforeTax.stream().map((cost) -> cost + .12*cost).forEach(System.out::println);
   
+  // 将字符串换成大写并用逗号链接起来
+  List<String> G7 = Arrays.asList("USA", "Japan", "France", "Germany", "Italy", "U.K.","Canada");
+  String G7Countries = G7.stream().map(x -> x.toUpperCase()).collect(Collectors.joining(", "));
+  
+  // 去重
+  List<Integer> numbers = Arrays.asList(9, 10, 3, 4, 7, 3, 4);
+  List<Integer> distinct = numbers.stream().map( i -> i*i).distinct().collect(Collectors.toList());
+  
+  List costBeforeTax = Arrays.asList(100, 200, 300, 400, 500);
+  double bill = costBeforeTax.stream().map((cost) -> cost + .12*cost).reduce((sum, cost) -> sum + cost).get();
+  System.out.println("Total : " + bill); 
+  ```
 
 # 加解密
 
