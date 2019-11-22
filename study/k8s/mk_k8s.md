@@ -1,9 +1,7 @@
 # 内容
 
 * 快速入门
-  * 核心概念
-  * 架构设计
-  * 认证授权
+  * 核心概念、架构设计、认证授权
 
 * 高可用集群搭建
   * 二进制或kubeadm
@@ -326,6 +324,12 @@
 # woody/123456
 # root/123456
 
+# 运行docker
+systemctl start docker
+
+# iterms多个窗口同时操作
+command + shift + i
+
 # 切换到root用户
 sudo -i 
 # m1(9主)、m2(10主)、s1(12从)
@@ -340,7 +344,124 @@ sudo -i
 # 查看网卡
 	ip a
 	#2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP>
+	
+systemctl status kubelet	
+# 查看日志、查看日志、查看日志
+journalctl -xefu kubelet
+	
+# 给文件夹设置权限
+chmod 777 文件夹
+
+# Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)
+# 或者
+# all available gssapi mechanisms failed错误解决
+vi /etc/ssh/sshd_config
+将PasswordAuthentication 的属性 no 改为 yes
+service sshd restart
+
+
+# global-config.properties中MASTER_VIP要改成和虚拟一IP段一致，如10.211.55.88
+
+# 启动
+systemctl start docker
+systemctl start kubelet
+service keepalived start	
+kubectl apply -f /etc/kubernetes/addons/calico-rbac-kdd.yaml
+kubectl apply -f /etc/kubernetes/addons/calico.yaml
+kubectl get pods -n kube-system
+
+# 进度
+m1加入其他master节点有问题（m2加入到m1）
+m2、m3的环境都准备好了
+
+# 加入其他master节点
+m2中加入m1
+
+
+# kubeadm 报错 error execution phase preflight: couldn’t validate the identity of the API Server: abort connecting to API servers after timeout of 5m0s
+# 在master重新生成token
+kubeadm token create
+# master新token uhme9v.rbqdsv9389irhim1
+kubeadm join 192.168.55.188:6443 --token uhme9v.rbqdsv9389irhim1 \
+    --discovery-token-ca-cert-hash sha256:a3da716d3f81182541ad3028dd01927f81546868b755c5b5648366992bbf39fc \
+    --experimental-control-plane --certificate-key 0964c2ad3e27f40f011b09cb7243d25edad8a0aaf35cdeca2d650a0af9c2869e    
+    
+    
+# [WARNING IsDockerSystemdCheck]: detected “cgroupfs” as the Docker cgroup driver. The recommended driver is “systemd”. Please follow the guide at https://kubernetes.io/docs/setup/cri/
+cat <<EOF > /etc/docker/daemon.json
+{
+    "exec-opts": ["native.cgroupdriver=systemd"]
+}
+EOF
+service docker restart
+	
+# 高可用集群部署
+cd kubernetes-ha-kubeadm/
+# 分发配置文件(都在m1上操作)
+# 拷贝到主
+scp target/configs/keepalived-master.conf root@192.168.55.121:/etc/keepalived/keepalived.conf
+# 拷贝到备
+scp target/configs/keepalived-backup.conf root@192.168.55.122:/etc/keepalived/keepalived.conf
+# 分发监测脚本
+scp target/scripts/check-apiserver.sh root@192.168.55.121:/etc/keepalived/
+scp target/scripts/check-apiserver.sh root@192.168.55.122:/etc/keepalived/
+
+[root@m1 kubernetes-ha-kubeadm]# find target/|grep kubeadm-config.yaml
+[root@m1 kubernetes-ha-kubeadm]# cp target/configs/kubeadm-config.yaml ~
+#m1
+kubeadm init --config=kubeadm-config.yaml --experimental-upload-certs
+
+
+# 测试集群安装好没
+[root@m2 ~]# curl -k  https://localhost:6443/healthz
+
+#m1
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of the control-plane node running the following command on each as root:
+
+  kubeadm join 192.168.55.188:6443 --token wlvir2.lny4w52jj67qoaf2 \
+    --discovery-token-ca-cert-hash sha256:78e434d7cfe3d3cd0df2eef3b51877b8b5949afc71d9ec35045ebb8ddc42b438 \
+    --experimental-control-plane --certificate-key 7791d8ad77ca642295b03cc52b0bf19a59a49cfc215d44819aa6e3146ae32201
+
+Please note that the certificate-key gives access to cluster sensitive data, keep it secret!
+As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
+"kubeadm init phase upload-certs --experimental-upload-certs" to reload certs afterward.
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.55.188:6443 --token wlvir2.lny4w52jj67qoaf2 \
+    --discovery-token-ca-cert-hash sha256:78e434d7cfe3d3cd0df2eef3b51877b8b5949afc71d9ec35045ebb8ddc42b438
+    
+    
+[root@m1 ~]# mkdir .kube
+[root@m1 ~]# cp -i /etc/kubernetes/admin.conf ~/.kube/config
+[root@m1 ~]# vi .kube/config
+[root@m1 ~]# kubectl get pods --all-namespaces
+NAMESPACE     NAME                         READY   STATUS    RESTARTS   AGE
+kube-system   coredns-8567978547-7d9wq     0/1     Pending   0          2m59s
+kube-system   coredns-8567978547-hf6sg     0/1     Pending   0          2m59s
+kube-system   etcd-m1                      1/1     Running   0          2m29s
+kube-system   kube-apiserver-m1            1/1     Running   0          2m21s
+kube-system   kube-controller-manager-m1   1/1     Running   0          2m20s
+kube-system   kube-proxy-l9wk8             1/1     Running   0          2m59s
+kube-system   kube-scheduler-m1            1/1     Running   0          2m8s
+[root@m1 ~]# curl -k https://localhost:6443/healthz
+ok[root@m1 ~]#
+
+
+[root@m1 addons]# cp calico* /etc/kubernetes/addons/
+
+vagrant plugin install --plugin-version 2.0.1 vagrant-proxyconf
+
+kubectl describe pods -n kube-system calico-typha-666749994b-klvjs
+kubectl describe pods -n kube-system coredns-8567978547-7d9wq
+
 ```
+
+![image-20191114161705667](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191114161705667.png)
 
 ## kubeadm方式
 
