@@ -1,5 +1,3 @@
-
-
 # Command
 
 ```shell
@@ -10,7 +8,57 @@ vagrant up node1 [node2][..]
 vagrant ssh node1
 ```
 
+
+
 ## 快照
+
+### 配置多台机器Vagrantfile
+
+```shell
+boxes = [
+ {
+     :name => "manager-node",
+     :eth1 => "192.168.0.11",
+     :mem => "1024",
+     :cpu => "1"
+ },
+ {
+     :name => "worker01-node",
+     :eth1 => "192.168.0.12",
+     :mem => "1024",
+     :cpu => "1"
+ },
+ {
+     :name => "worker02-node",
+     :eth1 => "192.168.0.13",
+     :mem => "1024",
+     :cpu => "1"
+ }
+]
+
+Vagrant.configure(2) do |config|
+
+config.vm.box = "centos/7"
+
+boxes.each do |opts|
+   config.vm.define opts[:name] do |config|
+     config.vm.hostname = opts[:name]
+     config.vm.provider "vmware_fusion" do |v|
+       v.vmx["memsize"] = opts[:mem]
+       v.vmx["numvcpus"] = opts[:cpu]
+     end
+
+     config.vm.provider "virtualbox" do |v|
+       v.customize ["modifyvm", :id, "--memory", opts[:mem]]
+		  v.customize ["modifyvm", :id, "--cpus", opts[:cpu]]
+		  v.customize ["modifyvm", :id, "--name", opts[:name]]
+     end
+
+     config.vm.network :public_network, ip: opts[:eth1]
+   end
+end
+end
+```
 
 
 
