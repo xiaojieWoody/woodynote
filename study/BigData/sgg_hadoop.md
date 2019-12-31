@@ -467,6 +467,7 @@
      1. 核心配置文件
 
         ```shell
+        # /opt/module/hadoop-2.7.2/etc/hadoop
         [atguigu@hadoop102 hadoop]$ vi core-site.xml
         ```
 

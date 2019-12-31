@@ -1236,6 +1236,43 @@ public static void main(String[] args) {
 # JSON
 
 ```java
+//创建json对象
+1. JSONObject jo = new JSONObject();
+   jo.put("name", "jon doe");
+2. new JSONObject(Map);
+3. new JSONObject(Object);
+4. new JSONObject("{\"city\":\"chicago\",\"name\":\"jon doe\",\"age\":\"22\"}");
+
+//创建json数组
+1. JSONArray ja = new JSONArray();
+   ja.put(Boolean.TRUE);
+   ja.put(Object)
+2. new JSONArray(List);
+2. JSONArray ja = new JSONArray("[true, \"lorem ipsum\", 215]");
+
+//json字符串转json对象
+1. String json = "{\"2\":\"efg\",\"1\":\"abc\"}";   
+   JSONObject json_test = JSONObject.fromObject(json); 
+JSONObject jsonObject = JSON.parseObject(str);
+
+//@JSONField
+//import com.alibaba.fastjson.annotation.JSONField;
+1. 指定字段的名称
+	@JSONField(name="role_name")  
+	private String roleName;
+2. 使用format制定日期格式
+	// 配置date序列化和反序列使用yyyyMMdd日期格式  
+	@JSONField(format="yyyyMMdd")  
+	public Date date; 
+3. 指定字段的顺序
+	@JSONField(ordinal = 3)  
+   private int f0;  
+4. 使用serialize/deserialize指定字段不序列化
+	@JSONField(serialize=false)
+	public Date date;
+```
+
+```java
 // json文件 -> json对象 -> 字符串 -> list
 String jsonStr = JSON.toJSONString(JSON.parse(file.getBytes()));
 List<ResDataVO> resData = JSON.parseObject(jsonStr, new TypeReference<List<ResDataVO>>(){});
@@ -1253,6 +1290,8 @@ JSONObject object = (JSONObject)obj;  // null
 //
 JSONObject jsonObj = new JSONObject(jsonStr);
 ExamPaper examPaper = JSONObject.parseObject(parameters,ExamPaper.class);
+// json文件转为对象
+ResExportResultConciseBean resBean = (ResExportResultConciseBean)JSONObject.parseObject(file.getBytes(), ResExportResultConciseBean.class);
 ```
 
 # Lambda
@@ -1451,4 +1490,76 @@ sString workspacePath = directory.getCanonicalPath(); //获取工作空间的绝
   p.load(inputStream);
   p.getProperty("driverClassName");
   ```
+
+
+
+
+
+```java
+// 图片正常
+        InputStream fileStream = null;
+        File f = null;
+        ImportResInfoBean result = new ImportResInfoBean();
+        try {
+            fileStream = file.getInputStream();
+            //临时文件
+            Path path = Paths.get(System.getProperty("java.io.tmpdir"), file.getName() + UUID.randomUUID() + ".zip");
+            f = path.toFile();
+
+            OutputStream os = new FileOutputStream(f);
+            byte[] byte_ = new byte[fileStream.available()];
+            fileStream.read(byte_);
+            os.write(byte_);
+            os.close();
+
+            ZipInputStream zis = new ZipInputStream(new FileInputStream(f));
+            ZipEntry entry;
+            // 资源信息
+            ResExportResultConciseBean bean = null;
+            // 图片信息
+            List<FileImageInfoBean> fileImage = new ArrayList<>();
+            while ((entry = zis.getNextEntry()) != null) {
+                long size = entry.getSize();
+                if(size > 0) {
+                    ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
+                    String name = entry.getName();
+                    byte[] byte_s=new byte[1024];
+                    int num=-1;
+                    //通过read方法来读取文件内容
+                    while((num=zis.read(byte_s,0,byte_s.length))>-1){
+                        byteArrayOutputStream.write(byte_s,0,num);
+                    }
+                    byte[] bytes = byteArrayOutputStream.toByteArray();
+                    if(name.contains(".json")) {
+                        bean = JSON.parseObject(bytes, ResExportResultConciseBean.class);
+                    } else {
+                        // 处理图片文件
+                        FileImageInfoBean fileInfo = new FileImageInfoBean();
+                        fileInfo.setFileId(name);
+                        fileInfo.setImage(bytes);
+                        fileImage.add(fileInfo);
+                    }
+                }
+            }
+            result.setImageInfoList(fileImage);
+            result.setResInfo(bean);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("解析资源zip文件异常......", e);
+        } finally {
+            try {
+                if(fileStream != null) {
+                    //关闭流
+                    fileStream.close();
+                }
+                //删除临时文件
+                org.apache.commons.io.FileUtils.deleteQuietly(f);
+            } catch (IOException e) {
+                e.printStackTrace();
+                log.error("关闭IO流异常......", e);
+            }
+        }
+        return result;
+    }
+```
 

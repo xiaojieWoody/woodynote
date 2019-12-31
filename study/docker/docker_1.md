@@ -417,7 +417,7 @@ docker stop/start container
   >
   > 2. 配置文件
   >
-  >    * 在Linux中网卡对应的其实就是文件，所以找到对应的网卡文件即可 
+  >    * ==在Linux中网卡对应的其实就是文件，所以找到对应的网卡文件即可== 
   >
   > 3. 给网卡添加IP地址
   >
@@ -486,7 +486,7 @@ docker stop/start container
 
 * Container的NS
 
-  * 按照上面的描述，实际上每个container，都会有自己的network namespace，并且是独立的，可以进入到容器中进行验证 
+  * ==按照上面的描述，实际上每个container，都会有自己的network namespace，并且是独立的，可以进入到容器中进行验证== 
 
   ```shell
   #1. 不妨创建两个container看看
@@ -523,7 +523,7 @@ docker stop/start container
 
    ![image-20191119152742561](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191119152742561.png)
 
-6. 这种网络连接方法称之为Bridge，其实也可以通过命令查看docker中的网络模式:`docker network ls` ，bridge也是docker中默认的网络模式
+6. ==这种网络连接方法称之为Bridge，其实也可以通过命令查看docker中的网络模式:`docker network ls` ，bridge也是docker中默认的网络模式==
 
 7. 检查一下bridge:`docker network inspect bridge` 
 
@@ -535,7 +535,7 @@ docker stop/start container
 
 ### 创建自己的network
 
-1.  创建一个network，类型为bridge 
+1.  ==创建一个network，类型为bridge== 
 
    ```shell
    docker network create tomcat-net
@@ -549,7 +549,7 @@ docker stop/start container
 
 3.  查看`tomcat-net`详情信息:`docker network inspect tomcat-net `
 
-4. 创建`tomcat`的容器，并且指定使用`tomcat-net `
+4. ==创建`tomcat`的容器，并且指定使用`tomcat-net `==
 
    `docker run -d --name custom-net-tomcat --network tomcat-net tomcat`
 
@@ -569,13 +569,13 @@ docker stop/start container
 
    `docker exec -it custom-net-tomcat ping 172.17.0.2`
 
-9. 此时如果tomcat01容器能够连接到tomcat-net上应该就可以了
+9. ==此时如果tomcat01容器能够连接到tomcat-net上应该就可以了==
 
    `docker network connect tomcat-net tomcat01 `
 
 10. 查看tomcat-net网络，可以发现tomcat01这个容器也在其中 
 
-11. 此时进入到tomcat01或者custom-net-tomcat中，不仅可以通过ip地址ping通，而且可以通过名字ping 到，这时候因为都连接到了用户自定义的tomcat-net bridge上 
+11. ==此时进入到tomcat01或者custom-net-tomcat中，不仅可以通过ip地址ping通，而且可以通过名字ping 到，这时候因为都连接到了用户自定义的tomcat-net bridge上== 
 
     `docker exec -it tomcat01 bash `
 
@@ -637,9 +637,9 @@ docker stop/start container
 
    `curl 172.17.0.4:8080 `
 
-* 小结 :之所以能够访问成功，是因为centos上的docker0连接了port-tomcat的network namespace 
+* 小结 :之所以能够访问成功，是因为==centos上的docker0连接了port-tomcat的network namespace== 
 
-4. 那如果要在centos7通过curl localhost方式访问呢?显然就要将port-tomcat的8080端口映射到centos上 
+4. ==那如果要在centos7通过curl localhost方式访问呢?显然就要将port-tomcat的8080端口映射到centos上== 
 
    ```shell
    docker rm -f port-tomcat
@@ -732,7 +732,7 @@ docker stop/start container
 
 ## Bind Mounting
 
-> 1. 创建一个tomcat容器 (centos里的目录/tmp/test和容器里的目录/usr/local/tomcat/webapps/test对应)
+> 1. ==创建一个tomcat容器 (centos里的目录/tmp/test和容器里的目录/usr/local/tomcat/webapps/test对应)==
 >
 >    `docker run -d --name tomcat01 -p 9090:8080 -v /tmp/test:/usr/local/tomcat/webapps/test tomcat`
 >
@@ -949,7 +949,9 @@ docker stop/start container
 
 8. 在haproxy连接上进行数据操作，然后查看数据库集群各个节点 
 
-## Nginx + SpringBoot项目 + MySQL
+## ==Nginx + SpringBoot项目 + MySQL==
+
+* ==在同一个网络中，bridge pro-net 容器之间不仅可以通过ip访问，而且可以通过名称==
 
 ![image-20191124125333254](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191124125333254.png)
 
@@ -997,8 +999,7 @@ docker stop/start container
    use db_gupao_springboot;
    create table t_user
    (
-       id int not null
-           primary key,
+       id int not null primary key,
        username varchar(50) not null,
        password varchar(50) not null,
        number varchar(100) not null
@@ -1030,7 +1031,8 @@ docker stop/start container
      ```shell
      FROM openjdk:8-jre-alpine
      MAINTAINER itcrazy2016
-     LABEL name="springboot-mybatis" version="1.0" author="itcrazy2016" COPY springboot-mybatis-0.0.1-SNAPSHOT.jar springboot-mybatis.jar 
+     LABEL name="springboot-mybatis" version="1.0" author="itcrazy2016" 
+     COPY springboot-mybatis-0.0.1-SNAPSHOT.jar springboot-mybatis.jar 
      CMD ["java","-jar","springboot-mybatis.jar"]
      ```
 
@@ -1128,7 +1130,7 @@ docker stop/start container
 * 单机：多个容器 docker-compose
 * 多机：多个容器 docker swarm、mesos、kubernetes，容器编排工具
 
-* 能够根据yaml文件的配置，在单个机器中管理多个容器
+* ==能够根据yaml文件的配置，在单个机器中管理多个容器==
 
 ## Docker传统方式实现
 
@@ -1296,7 +1298,7 @@ docker stop/start container
 docker-compose version
 # 根据yml创建service
 docker-compose up
-指定yaml：docker-compose  up -f xxx.yaml
+指定yaml：docker-compose up -f xxx.yaml
 后台运行：docker-compose up
 # 查看启动成功的service
 docker-compose ps

@@ -281,7 +281,7 @@ kube-system       Active   27m
 apiVersion: v1
 kind: Namespace
 metadata:
-name: myns
+  name: myns
 ```
 
 * kubectl apply -f myns-namespace.yaml
@@ -335,6 +335,8 @@ myns              Active   6s
 
 * 我们都知道K8S最小的操作单位是Pod，先思考一下同一个Pod中多个容器要进行通信
 
+  * 每个Pod中都会有个pause container，所有的创建的container都会连接到它上面
+
 * 由官网的这段话可以看出，同一个pod中的容器是共享网络ip地址和端口号的，通信显然没问题
 
   ```shell
@@ -345,10 +347,23 @@ myns              Active   6s
 
 ## 集群内Pod之间的通信
 
+![image-20191201213530550](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191201213530550.png)
+
 * 接下来就聊聊K8S最小的操作单元，Pod之间的通信
+
 * 我们都之间Pod会有独立的IP地址，这个IP地址是被Pod中所有的Container共享的
+
 * 那多个Pod之间的通信能通过这个IP地址吗？
-* 我认为需要分两个维度：一是集群中同一台机器中的Pod，二是集群中不同机器中的Pod
+
+* 分两个维度：
+
+  * 一是集群中同一台机器中的Pod
+  * 二是集群中不同机器中的Pod
+
+* 结论
+
+  * 得益于网络插件calico，集群内部不管是pod访问pod，还是pod访问node，还是node访问pod都可以成功。【cluster Network】
+  * 
 
 * **准备两个pod，一个nginx，一个busybox**
 
@@ -357,15 +372,15 @@ myns              Active   6s
   apiVersion: v1
   kind: Pod
   metadata:
-  name: nginx-pod
-  labels:
-   app: nginx
+    name: nginx-pod
+    labels:
+      app: nginx
   spec:
-  containers:
-    - name: nginx-container
-   image: nginx
-   ports:
-      - containerPort: 80
+    containers:
+     - name: nginx-container
+       image: nginx
+       ports:
+        - containerPort: 80
   ```
 
   ```yaml
@@ -373,14 +388,14 @@ myns              Active   6s
   apiVersion: v1
   kind: Pod
   metadata:
-  name: busybox
-  labels:
-   app: busybox
+    name: busybox
+    labels:
+       app: busybox
   spec:
-  containers:
+   containers:
     - name: busybox
-   image: busybox
-   command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+      image: busybox
+      command: ['sh', '-c', 'echo The app is running! && sleep 3600']
   ```
 
 * 将两个pod运行起来，并且查看运行情况
@@ -457,6 +472,12 @@ myns              Active   6s
 
 ## 集群内Service-Cluster IP
 
+![image-20191201214621048](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191201214621048.png)
+
+* pod其实是很不稳定的，deployment，pod挂掉，新开启pod ip
+  
+* service:cluster IP  可供集群内访问，对很多Deployment[Pod]进行负载均衡
+  
 * 对于上述的Pod虽然实现了集群内部互相通信，但是Pod是不稳定的，比如通过Deployment管理Pod，随时可能对Pod进行扩缩容，这时候Pod的IP地址是变化的。能够有一个固定的IP，使得集群内能够访问。也就是之前在架构描述的时候所提到的，能够把相同或者具有关联的Pod，打上Label，组成Service。而Service有固定的IP，不管Pod怎么创建和销毁，都可以通过Service的IP进行访问
 
 * [Service官网](https://kubernetes.io/docs/concepts/services-networking/service/)
@@ -594,6 +615,8 @@ myns              Active   6s
 
 ## 外部服务访问集群中的Pod
 
+![image-20191201215811446](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191201215811446.png)
+
 ### Service-NodePort
 
 > 也是Service的一种类型，可以通过NodePort的方式
@@ -659,7 +682,11 @@ myns              Active   6s
 
 * 通常需要第三方云提供商支持，有约束性
 
-### Ingress
+### ==Ingress==
+
+* 5.2.6还需再看
+
+![image-20191202205205603](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191202205205603.png)
 
 * [官网](<https://kubernetes.io/docs/concepts/services-networking/ingress/>)
 
@@ -834,11 +861,60 @@ spec:
 
 2. 创建wordpress-db.yaml文件`网盘/Kubernetes实战走起/课堂源码/wordpress-db.yaml`
 
+   ```yaml
+   apiVersion: apps/v1beta1
+   kind: Deployment
+   metadata:
+     name: wordpress-deploy
+     namespace: wordpress
+     labels:
+       app: wordpress
+   spec:
+     template:
+       metadata:
+         labels:
+           app: wordpress
+       spec:
+         containers:
+         - name: wordpress
+           image: wordpress
+           imagePullPolicy: IfNotPresent
+           ports:
+           - containerPort: 80
+             name: wdport
+           env:
+           - name: WORDPRESS_DB_HOST
+             value: 192.168.80.223:3306                     
+           - name: WORDPRESS_DB_USER
+             value: wordpress
+           - name: WORDPRESS_DB_PASSWORD
+             value: wordpress
+   ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: wordpress
+     namespace: wordpress
+   spec:
+     type: NodePort
+     selector:
+       app: wordpress
+     ports:
+     - name: wordpressport
+       protocol: TCP
+       port: 80
+       targetPort: wdport
+   ```
+
 3. 根据wordpress-db.yaml创建资源[mysql数据库]
 
    ```shell
    kubectl apply -f wordpress-db.yaml
    kubectl get pods -n wordpress      # 记得获取ip，因为wordpress.yaml文件中要修改
+   kubectl get pods -n wordpress -o wide
+   # 如果不是running，则查看详情
+   # kubectl describe pod wordpress-deploy-77cb4cd447-p596m -n wordpress
+   
    kubectl get svc mysql -n wordpress
    kubectl describe svc mysql -n wordpress
    ```
@@ -858,6 +934,8 @@ spec:
 6. 访问测试
 
    * win上访问集群中任意宿主机节点的IP:30063
+
+7. 在集群中，发现可以通过service name进行访问，不仅仅是ip，那就说明service不仅帮我们做了负载均衡，而且做了dns
 
 ## 部署Spring Boot项目
 

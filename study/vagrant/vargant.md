@@ -6,6 +6,11 @@
 vagrant up node1 [node2][..]
 # ssh连接
 vagrant ssh node1
+
+# 列出环境中的镜像
+vagrant box list
+# 添加镜像到环境中
+vagrant box add centos7 /Volumes/woody_1/vagrant/centos7/virtualbox.box
 ```
 
 
@@ -59,10 +64,6 @@ boxes.each do |opts|
 end
 end
 ```
-
-
-
-
 
 # Vagrantfile
 

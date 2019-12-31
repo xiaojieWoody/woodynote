@@ -1,3 +1,5 @@
+![image-20191130212803585](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191130212803585.png)
+
 # 初识k8s
 
 ## K8S核心组件和架构图
@@ -17,6 +19,8 @@
 5. 不妨把相同或者有关联的Pod分门别类一下，那怎么分门别类呢?Label 
 
 6. 具有相同label的service要是能够有个名称就好了，Service 
+
+   * Selector，可以选择拥有相同label标签的Pod
 
 7. Pod运行在哪里呢?当然是机器，比如一台centos机器，把这个机器 称作为Node 
 
@@ -92,18 +96,20 @@
 
 * [coreos](https://coreos.com/tectonic/ )
 
-### **Minikube[Y]** 
+### **Minikube** 
 
 * K8S单节点，适合在本地学习使用
 * [官网](https://kubernetes.io/docs/setup/learning-environment/minikube/ )
 * [github](https://github.com/kubernetes/minikube )
 
-### **kubeadm[Y]** 
+### **kubeadm** 
 
 * 本地多节点 
 * [github](https://github.com/kubernetes/kubeadm )
 
 ## 使用Minikube搭建单节点K8s
+
+![image-20191201114605973](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191201114605973.png)
 
 ### **Windows** 
 
@@ -275,7 +281,7 @@ kubectl cluster-info
 
 * 总结：通过Minikube，我们使用kubectl操作单节点的K8S，而且也能感受到pod的创建和删除，包括 pod中对应的容器，一切才刚刚开始 
 
-# 搭建K8s集群
+# ==搭建K8s集群==
 
 * [官网](<https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#installing-kubeadm-kubelet-and-kubectl>)
 * [github](https://github.com/kubernetes/kubeadm)
@@ -367,6 +373,7 @@ cat <<EOF >  /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF
+
 sysctl --system
 ```
 
@@ -526,11 +533,28 @@ sysctl --system
 
      ```shell
      # 本地有镜像
-     kubeadm init --kubernetes-version=1.14.0 --apiserver-advertise-address=192.168.8.51 --pod-network-cidr=10.244.0.0/16
+     kubeadm init --kubernetes-version=1.14.0 --apiserver-advertise-address=192.168.0.131 --pod-network-cidr=10.244.0.0/16
      #【若要重新初始化集群状态：kubeadm reset，然后再进行上述操作】
      ```
 
    * 记得保存好最后kubeadm join的信息
+
+     ```shell
+     To start using your cluster, you need to run the following as a regular user:
+     
+       mkdir -p $HOME/.kube
+       sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+       sudo chown $(id -u):$(id -g) $HOME/.kube/config
+     
+     You should now deploy a pod network to the cluster.
+     Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+       https://kubernetes.io/docs/concepts/cluster-administration/addons/
+     
+     Then you can join any number of worker nodes by running the following on each as root:
+     
+     kubeadm join 192.168.0.131:6443 --token 4eu22b.yi2h7ehvrv28x9go \
+         --discovery-token-ca-cert-hash sha256:b8d14bce6a626ef34cfacb9079f9742d3c6e3489c96961cb5631e46183bf2d90
+     ```
 
 3. 根据日志提示
 
@@ -541,6 +565,11 @@ sysctl --system
    ```
 
    * 此时kubectl cluster-info查看一下是否成功
+
+   ```shell
+   kubectl get pods
+   kubectl get pods -n kube-system
+   ```
 
 4. 查看pod验证一下
 
@@ -567,6 +596,13 @@ sysctl --system
 * `calico，同样在master节点上操作`
 
   ```shell
+  # 查看文件，提前拉取镜像
+  docker pull calico/pod2daemon-flexvol:v3.9.1
+  docker pull calico/kube-controllers:v3.9.1
+  docker pull calico/cni:v3.9.1
+  
+  kubectl get pods -n kube-system -w
+  
   # 在k8s中安装calico
   kubectl apply -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
   # 确认一下calico是否安装成功
@@ -588,11 +624,14 @@ sysctl --system
 
    ```shell
    kubectl get nodes
+   # kubectl get nodes -w
    
    NAME                   STATUS   ROLES    AGE     VERSION
    master-kubeadm-k8s     Ready    master   19m     v1.14.0
    worker01-kubeadm-k8s   Ready    <none>   3m6s    v1.14.0
    worker02-kubeadm-k8s   Ready    <none>   2m41s   v1.14.0
+   
+   kubectl get pods -n kube-system
    ```
 
 ### 再次体验Pod
@@ -636,7 +675,7 @@ sysctl --system
 
    ```shell
    kubectl get pods
-   kubectl get pods -o wide
+   kubectl get pods -o wide          # 访问curl 192.168.190.66
    kubectl describe pod nginx
    ```
 
@@ -652,6 +691,10 @@ sysctl --system
    ```shell
    kubectl delete -f pod_nginx_rs.yaml
    ```
+
+![image-20191201163433503](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191201163433503.png)
+
+
 
 # Basic
 
