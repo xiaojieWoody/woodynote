@@ -2,25 +2,28 @@
 
 # 初识k8s
 
+* container k8s 不同云服务器，就像在本地一样
+* docker-compose单机容器管理的技术
+
 ## K8S核心组件和架构图
 
 * [官网](![image-20191124174539213](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191124174539213.png))
 
 1. 先以container为起点，k8s既然是容器编排工具，那么一定会有container 
 
-2. 那k8s如何操作这些container呢?从感性的角度来讲，得要有点逼格，k8s不想直接操作 container，因为操作container的事情是docker来做的，k8s中要有自己的最小操作单位，称之为 Pod，说白了，Pod就是一个或多个Container的组合 
+2. 那k8s如何操作这些container呢?从感性的角度来讲，得要有点逼格，k8s不想直接操作 container，因为操作container的事情是docker来做的，k8s中要有自己的最小操作单位，称之为 Pod，说白了，==Pod就是一个或多个Container的组合== 
 
-3. 那Pod的维护谁来做呢?那就是ReplicaSet，通过selector来进行管理 
+3. ==那Pod的维护谁来做呢?那就是ReplicaSet，通过selector来进行管理== 
 
-4. Pod和ReplicaSet的状态如何维护和监测呢?Deployment 
+4. ==Pod和ReplicaSet的状态如何维护和监测呢?Deployment==
 
    ![image-20191124174916145](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191124174916145.png)
 
-5. 不妨把相同或者有关联的Pod分门别类一下，那怎么分门别类呢?Label 
+5. ==不妨把相同或者有关联的Pod分门别类一下，那怎么分门别类呢?Label== 
 
 6. 具有相同label的service要是能够有个名称就好了，Service 
 
-   * Selector，可以选择拥有相同label标签的Pod
+   * ==Selector，可以选择拥有相同label标签的Pod==
 
 7. Pod运行在哪里呢?当然是机器，比如一台centos机器，把这个机器 称作为Node 
 
@@ -85,6 +88,8 @@
 * [Kelsey Hightower ](https://github.com/kelseyhightower)
 
 ### 在线play-with-k8s
+
+![image-20200101171025154](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200101171025154.png)
 
 * [网址](https://labs.play-with-k8s.com/ )
 

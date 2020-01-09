@@ -120,6 +120,7 @@ notBooksSkuList.sort(new Comparator<Sku>() {
   @Override
   public int compare(Sku sku1, Sku sku2) {
     if (sku1.getTotalPrice() > sku2.getTotalPrice()) {
+      // 从大到小
       return -1;
     } else if (sku1.getTotalPrice() < sku2.getTotalPrice()) {
       return 1;
@@ -128,6 +129,20 @@ notBooksSkuList.sort(new Comparator<Sku>() {
     }
   }
 });
+
+List<Stu> sortedRes = listData.stream().sorted(new Comparator<Stu>() {
+  @Override
+  public int compare(Stu o1, Stu o2) {
+    if (o1.getAge() > o2.getAge()) {
+      // 从大到小
+      return -1;
+    } else if (o1.getAge() < o2.getAge()) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+}).collect(Collectors.toList());
 ```
 
 ```java
@@ -238,6 +253,23 @@ long count = list.stream().count();
 ```
 
 ```java
+// 熟练
+List<String> list = people.stream().map(Person::getName).collect(Collectors.toList());
+Set<String> set = 		  
+  		people.stream().map(Person::getName).collect(Collectors.toCollection(TreeSet::new));
+String joined = things.stream().map(Object::toString).collect(Collectors.joining(", "));
+int total = employees.stream().collect(Collectors.summingInt(Employee::getSalary)));
+Map<Department, List<Employee>> byDept
+         = employees.stream().collect(Collectors.groupingBy(Employee::getDepartment));
+Map<Department, Integer> totalByDept
+         = employees.stream()
+                    .collect(Collectors.groupingBy(Employee::getDepartment,                                                 Collectors.summingInt(Employee::getSalary)));
+Map<Boolean, List<Student>> passingFailing =
+         students.stream()
+                 .collect(Collectors.partitioningBy(s -> s.getGrade() >= PASS_THRESHOLD));
+```
+
+```java
 // 流的四种构建形式
 //1. 由数值直接构建流
 Stream stream = Stream.of(1, 2, 3, 4, 5);
@@ -256,6 +288,7 @@ stream.limit(100).forEach(System.out::println);
   * 将流中的元素累积成一个结果
   * 作用于终端操作collect()上
   * collect / Collect / Collectors
+* ==分组分区==
 
 ```java
 // 常见预定义收集器使用

@@ -35,6 +35,184 @@ java -cp day01.jar day01.service.multiport.MultiPortServer
 
 
 
+```shell
+# 常用命令
+w
+whoami
+who
+# vi
+yyp			# 复制
+u				# 撤销
+x				# 删除光标所在字符
+dd			# 删除一行
+A				# 来到一行的末尾
+o				# 光标下一行插入一行
+r				# 替换所选中字符
+:s/boot/BOOTBOOTBOOT/g   # 替换光标所在行的所有boot为BOOTBOOTBOOT
+:b/name/s//NAMENAMENAME/g # 替换文章中所有name
+/name		# 搜索name，按n向下搜索，N向上搜索
+G				# 文章底部
+```
+
+```shell
+# 文件
+ls
+pwd
+ls -l         # 文件列表显示
+ls -lt        # 文件时间列表显示
+ls -lrt				# 文件时间列表显示，最近的在最下
+ls -lart      # a，显示隐藏文件
+cat a.txt     # 显示文件所有
+more a.txt		# 只显示一屏
+man more      # 查看more有哪些功能
+tail -10 test.txt   # 最后10行打印出来
+tail -f test.txt    # 动态打印
+head -10 test.txt   # 最前面10行打印出来
+echo "test111" >>test.txt     # 文件中追加内容
+cat /etc/passwd >> test1.txt  # passwd中内容添加到test1.txt中
+cat /etc/passwd > test1.txt   # 先清空，再添加
+echo "" >test1.txt      # 清空文件
+>test1.txt							# 清空文件
+tail -10 test.txt > test1.txt # test.txt中最后10行添加到test1.txt中
+cat test1.txt | tr  '[a-z]' '[A-Z]' >test2.txt    # 文件中字符都替换成大写，然后重定向到test2.txt中
+cat test2.txt | tr -d " "  # 删除空格
+cp test.txt test1.txt      # 复制  -r 递归复制
+touch test.txt             # 对文件时间进行更新，或者创建文件
+date                       # 日期
+grep 'test111' test.txt -n # 查找文件内容并显示在第几行
+grep -A 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符后三行
+grep -B 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符前三行
+grep -C 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符上下三行
+grep -A 3 'FINISHED' test.txt --color=auto    # 高亮显示FINISHED
+grep -A 3 'FINISHED' test.txt -c --color=auto # 有多少行
+grep -A 3 'FINISHED' test.txt --color=auto | wc -l  # 有多少行
+find ./ -name 'test.txt'        # 查找当前目录下 test.txt 文件
+cat /etc/passwd | sort          # 按首字母排序
+cat /etc/passwd |cut -d ":" -f 1 # 按 : 切割
+cat 1.txt | uniq                 # 去重显示
+cat 1.txt | uniq | wc -l         # 去重后有多少行
+cat 1.txt | sort | uniq -c       # 去重排序统计
+```
+
+```shell
+# 用户、组
+whoami			# 当前用户
+su -testA 	# 切换用户
+su - testA  # 切换用户并带其系统变量
+env         # 查看系统变量
+exit      # 退出用户
+cat /etc/passwd  # 查看用户  用户名:passwd:UID:GID:名称:家目录:shell
+id
+groupadd nginxA			# 创建组
+useradd nginxtest1 -g nginxA -s /bin/nologin   # 创建用户，不用登录
+id nginxtest1      # 查看用户
+useradd nginxtest1 -g nginxA -s /bin/bash   # 创建用户，需登录
+sudo xxx          # 以系统用户身份执行  
+passwd nginxtest2 # 给用户设置密码  
+passwd            # 重新设置密码
+userdel nginxtest1# 删除用户
+cat /etc/group    # 查看组
+groupdel testB    # 删除组
+# 权限 
+# r   w   x
+# 读4 写2 执行1
+# 用户 组 其他
+chown nginxtest2 test1    # 更换文件所属用户
+ls -lrt
+chown nginxtest2:nginxA test1 # 更换文件所属组
+chmod u+x test1         # 用户加上x权限
+chmod u-x test1         # 用户减去x权限
+chmod g+x test1         # 组加上x权限
+chmod 760 tset1         # 设置权限
+```
+
+```shell
+# 压缩、打包
+gzip install.log        # 压缩
+zcat install.log.gz    # 查看
+tar cvf 20180317.tar * # 打包
+tar xvf 20180317.tar   # 解包
+tar zcvf 20180317.tar.gz *   # 打包压缩
+tar zxvf 20180317.tar.gz     # 解压
+```
+
+```shell
+hostname
+ssh root@192.168.0.110      # linux之间交互
+# 免密登录
+# 192.168.0.111
+cd .ssh/
+ssh-keygen
+cat id_rsa.pub              # 把公钥放到对方
+# 对方  192.168.0.110
+cd .ssh/
+ssh-keygen
+touch authorized_keys       # 将192.168.0.111的id_rsa.pub内容填进去
+# 192.168.0.111 
+ssh 192.168.0.110
+```
+
+```shell
+# 检测端口，判断服务的连接情况
+netstat -anlp | grep 21
+netstat -anltp | grep vsftpd
+ps -ef|grep 30763
+```
+
+```shell
+# ftp  文件传输服务         sftp 22, ftp 21
+# 192.168.0.111
+service vsftpd start      # 启动ftp服务
+yum install ftp
+useradd ftpuser1
+passwd ftpuser1
+# 192.168.0.110
+ftp 192.168.0.111
+Name:ftpuser1
+Password:ftpuser1
+put
+get
+
+# scp
+scp xxx root@192.168.0.111:/home/test/1.txt
+scp root@192.168.0.111:/home/test/1.txt /root/
+
+# crontab 定时任务       分 时 日 月 周 crontab
+crontab -e
+0 22 * * * /usr/sbin/vsftpd stop   # 每天12点执行
+#30 6,12 * * *                 # 每天6点30和12点30执行
+#10 6-12 * * *                 # 每天6点到12点之间每10分钟执行
+#*/5 * * * *                   # 每5分钟执行一次
+crontab -l
+
+# 后台运行
+jobs				# 查看后台运行程序
+tail -f /var/log/message &      # 后台运行程序
+fg 2        # jobs后，调度后台第2个运行程序
+bg 1        # jobs后，调度后台第1个程序运行
+
+# 系统级服务 service
+cd /etc/init.d/
+ls
+
+chkconfig --list | grep vsftpd
+chkconfig --level 35 vsftpd on    # 3和5级别启动
+chkconfig vsftpd on
+chkconfig vsftpd off
+```
+
+![image-20200104120925920](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104120925920.png)
+
+```shell
+df -h			#查看硬盘大小
+du -sh *  #查看文件大小
+date -s "10:10:20 2018-02-10"    # 设置时间
+```
+
+
+
+
+
 ### 搭建自己的gitlab
 
 * [官网](https://about.gitlab.com/install/#centos-7 )

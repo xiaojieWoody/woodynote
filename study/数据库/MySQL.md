@@ -20,6 +20,10 @@
 
 * ==查出平均分高于60的学生==
   * `select name from (select avg(price) as avgSco, name from books group by name) as avgTab where avgSco > 60`
+* 查出每个年级成绩第二好的学生
+  * 注意
+    * 第一名和第二名分数相同
+    * 学生人数少于2
 * ==查询重复记录==
   * `select cardid from t_community_accesscard_info group by cardid having count(*)>1`
 
