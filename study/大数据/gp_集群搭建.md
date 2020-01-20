@@ -372,3 +372,58 @@ drwxr-xr-x   - hadoop supergroup          0 2020-01-06 22:04 /user
 10.77.20.102 slave2
 ```
 
+# 安装Hive
+
+```shell
+scp /Users/dingyuanjie/study/BigData/hadoop_cluster/apache-hive-3.1.2-bin.tar.gz hadoop@192.168.0.201:/home/hadoop/software
+
+[hadoop@master software]$ tar -zxvf apache-hive-3.1.2-bin.tar.gz
+[hadoop@master software]$ mv apache-hive-3.1.2-bin hive
+
+[hadoop@master conf]$ pwd
+/home/hadoop/software/hive/conf
+[hadoop@master conf]$ mv hive-env.sh.template hive-env.sh
+
+
+export HADOOP_HOME=/home/hadoop/software/hadoop-3.1.1
+export HIVE_CONF_DIR=/home/hadoop/software/hive/conf
+```
+
+```shell
+2.6
+root
+	mkdir -p /data/hadoop/namenode
+	mkdir -p /data/hadoop/data
+	mkdir -p /data/hadoop/tmp
+	
+	master 	
+		配置文件
+  	slaves文件 
+  		slave1
+  		slave2
+  	masters
+    	master
+    hadoop-env.sh
+    	export JAVA_HOME=/usr/java/jdk1.8.0_161
+    	
+    master	
+    	bin]./hdfs namenode -format	
+    
+    start..
+    
+    hadoop fs -ls /
+    hadoop fs -mkdir /user
+    hadoop fs -put /..
+    
+    mapreduce]hadoop jar ./hadoop-mapreduce-example-2.6.5.jar pi 5 10
+    
+    masterip:50070
+    masterip:8088   yarn
+```
+
+```shell
+查看日志
+```
+
+
+
