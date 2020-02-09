@@ -511,6 +511,255 @@ kubectl describe pods -n kube-system coredns-8567978547-7d9wq
     * 两个woker节点上安装Harbor，master节点上安装nginx
 
     ![image-20191111173643558](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191111173643558.png)
+    
+    ```shell
+    # slave
+    # 1. 下载解压 harbor-offline-installer-v1.9.4.tgz
+    # 2. 修改配置文件harbor.yml
+    hostname: 192.168.0.162
+    # 3. 安装docker-compose
+    sudo curl -L "https://github.com/docker/compose/releases/download/1.25.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    # 国内镜像
+    curl -L https://get.daocloud.io/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+    
+    sudo chmod +x /usr/local/bin/docker-compose
+    docker-compose -version
+    # 4. 安装
+    sh install.sh
+    # 启动 docker-compose start
+    # http://192.168.0.162
+    ```
+    
+    ```shell
+    # master
+    # 1. 安装nginx
+    docker pull nginx:1.13.12
+    # 2. 配置文件
+    # nginx.conf
+    user nginx;
+    worker_processes 1;
+    
+    error_log /var/log/nginx/error.log warn;
+    
+    pid /var/run/nginx.pid;
+    
+    events {
+    	worker_connections 1024;
+    }
+    
+    stream {
+    	upstream hub {
+    		server 192.168.0.162:80;
+    	}
+    	server {
+    		listen 80;
+    		proxy_pass hub;
+    		proxy_timeout 300s;
+    		proxy_connect_timeout 5s;
+    	}
+    }
+    
+    # restart.sh
+    #!/bin/bash
+    
+    docker stop harbornginx
+    
+    docker rm harbornginx
+    
+    docker run -itd --net=host --name=harbornginx -v /software/nginx/nginx.conf:/etc/nginx/nginx.conf nginx:1.13.12
+    # 3. 启动nginx
+    sh restart.sh
+    docker logs 0a9f1
+    ```
+    
+    ```shell
+    # 登录harbor   （创建新用户harbor/Harbor12345）
+    # 1. 创建公共项目 kubernetes（添加成员harbor）
+    # 宿主主机上配置hosts
+    192.168.0.161 hub.imooc.com
+    # mster/slave上配置hosts
+    192.168.0.161 hub.imooc.com
+    
+    # 2. master上
+    docker images|grep nginx
+    docker tag nginx:1.13.12 hub.imooc.com/kubernetes/nginx:1.13.12
+    vi /etc/docker/daemon.json          # master/slave都要添加
+    {
+    	"insecure-registries":["hub.imooc.com"]
+    }
+    systemctl restart docker
+    # 启动nginx
+    sh restart.sh
+    # 登录
+    docker login hub.imooc.com
+    harbor
+    Harbor12345
+    # push镜像
+    docker push hub.imooc.com/kubernetes/nginx:1.13.12
+    # slave上pull
+    docker pull hub.imooc.com/kubernetes/nginx:1.13.12
+    # Harbor上配置同步
+    # 可在多个服务器上同步镜像
+    ```
+
+### kubernetes的服务发现
+
+* 服务内部互相访问
+
+  ![image-20200207120909216](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207120909216.png)
+
+  * 方式一：通过DNS + ClusterIP
+  * 方式二：通过HeadlessService返回Pod实例供调用者选择
+
+* 服务内访问服务外
+
+  ​	![image-20200207121649673](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207121649673.png)
+
+  * 方式一：通过IP + Port直接访问外部服务
+  * 方式二：DNS + Service + Endpoint（配置外部服务）
+
+* 服务外访问服务内
+
+  ![image-20200207122450330](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207122450330.png)
+
+  * 方式一：NodePort，所有实例上都会开8080端口
+  * 方式二：hostport，只在当前实例上开8080端口
+  * 方式三：Ingress
+
+### Ingress
+
+```shell
+# nginx-ingress
+# 只需一台：slave
+https://kubernetes.github.io/ingress-nginx/deploy/
+# mkdir /software/nginx-ingress
+wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.28.0/deploy/static/mandatory.yaml
+kubectl apply -f mandatory.yaml
+# 查看需要哪些镜像
+grep image mandatory.yaml
+# slave 上单独拉去镜像
+docker pull quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.28.0
+# 如果官方拉取慢，则找国内镜像源
+docker pull quay.azk8s.cn/kubernetes-ingress-controller/nginx-ingress-controller:0.28.0
+# 然后打tag
+docker tag quay.azk8s.cn/kubernetes-ingress-controller/nginx-ingress-controller:0.28.0 quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.28.0
+# slave上拉取镜像好了后，master上也好了
+kubectl get all -n ingress-nginx
+
+kubectl describe pod nginx-ingress-controller-67c7566b6-22mcl -n ingress-nginx
+```
+
+```shell
+docker pull gcr.azk8s.cn/google_containers/kubedns-amd64:1.5
+docker tag gcr.azk8s.cn/google_containers/kubedns-amd64:1.5 k8s.gcr.io/defaultbackend-amd64:1.5
+
+docker pull quay.azk8s.cn/kubernetes-ingress-controller/nginx-ingress-controller:0.19.0
+docker tag quay.azk8s.cn/kubernetes-ingress-controller/nginx-ingress-controller:0.19.0 quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.19.0
+```
+
+
+
+nodeport
+
+![image-20200207151114258](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207151114258.png)
+
+```shell
+[root@slave nginx-ingress]# netstat -tpnl|grep 80
+tcp6       0      0 :::80                   :::*                    LISTEN      22332/docker-proxy
+# 停掉一个slave上的harbor（因为其占用了80端口）
+# nginx使用的是161，所以停掉222的harbor
+netstat -tpnl|grep 80
+netstat -tpnl|grep 443 # 都没占用
+# master上
+kubectl get nodes
+kubectl label node slave3 app=ingress   # 给222打个标签
+```
+
+![image-20200207205825166](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207205825166.png)
+
+![image-20200207205956429](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200207205956429.png)
+
+```shell
+kubectl apply -f mandatory.yaml
+kubectl get all -n ingress-nginx
+# 222上查看80和443端口已起来
+netstat -tpnl|grep 80
+netstat -tpnl|grep 443
+```
+
+```yaml
+# master上 /software/ingress-demo/ingress-demo.yaml
+
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat-demo
+spec:
+  selector:
+    matchLabels:
+      app: tomcat-demo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tomcat-demo
+    spec:
+      containers:
+      - name: tomcat-demo
+        image: registry.cn-hangzhou.aliyuncs.com/liuyi01/tomcat:8.0.51-alpine
+        ports:
+        - containerPort: 8080
+---
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-demo
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: tomcat-demo
+
+---
+#ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tomcat-demo
+spec:
+  rules:
+  - host: tomcat.mooc.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: tomcat-demo
+          servicePort: 80          
+```
+
+```shell
+kubectl create -f ingress-demo.yaml
+kubectl get pod -o wide 
+# 宿主主机上绑定hosts  因为ingress在222上启动
+192.168.0.222 tomcat.mooc.com
+192.168.0.222 api.mooc.com
+# 访问
+http://api.mooc.com/          # 404
+tomcat.mooc.com
+# 查看日志
+kubectl logs tomcat-demo-6bc7d5b6f4-bbzb8
+journalctl -f
+```
+
+```shell
+kubectl get svc
+kubectl get pods -o wide
+kubectl describe svc tomcat-services
+```
 
 
 

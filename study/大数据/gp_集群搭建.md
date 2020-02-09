@@ -231,7 +231,7 @@ service network restart
 
 ```shell
 1. 搭建虚拟机  master:2G, slave1:1G, slave2:1G
-2. 确定hostname(master,slave1,slave2)
+2. 确定hostname(master,slave1,slave2)    # sudo hostnamectl set-hostname <newhostname>
 	vi /etc/sysconfig/network
 3. 设置网络
 4. 设置host: vi /etc/hosts
@@ -255,24 +255,6 @@ ssh-copy-id george@slave2
 # 验证
 ssh slave2  # slave1上
 ```
-
-* 设置静态ip
-
-  ![image-20200104204758651](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104204758651.png)
-
-  ![image-20200104204631428](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104204631428.png)
-
-  ![image-20200104204915547](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104204915547.png)
-
-  ![image-20200104204459087](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104204459087.png)
-
-  ![image-20200104204542241](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104204542241.png)
-
-![image-20200104183204361](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104183204361.png)
-
-![image-20200104183122168](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104183122168.png)
-
-
 
 ## 安装jdk1.8（root用户）：
 

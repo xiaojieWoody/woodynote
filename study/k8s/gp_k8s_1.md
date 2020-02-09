@@ -332,7 +332,7 @@ sudo yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/cen
 sudo mkdir -p /etc/docker
 sudo tee /etc/docker/daemon.json <<-'EOF'
 {
-"registry-mirrors": ["这边替换成自己的实际地址"]
+"registry-mirrors": ["https://0eipo2bm.mirror.aliyuncs.com"]
 }
 EOF
 sudo systemctl daemon-reload
@@ -560,7 +560,27 @@ sysctl --system
      kubeadm join 192.168.0.131:6443 --token 4eu22b.yi2h7ehvrv28x9go \
          --discovery-token-ca-cert-hash sha256:b8d14bce6a626ef34cfacb9079f9742d3c6e3489c96961cb5631e46183bf2d90
      ```
-
+     
+     ```shell
+     # 暂时
+     Your Kubernetes control-plane has initialized successfully!
+     
+     To start using your cluster, you need to run the following as a regular user:
+     
+       mkdir -p $HOME/.kube
+       sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+       sudo chown $(id -u):$(id -g) $HOME/.kube/config
+     
+     You should now deploy a pod network to the cluster.
+     Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+       https://kubernetes.io/docs/concepts/cluster-administration/addons/
+     
+     Then you can join any number of worker nodes by running the following on each as root:
+     
+     kubeadm join 192.168.0.161:6443 --token eesqmf.mqao0xs70hr1xdo6 \
+         --discovery-token-ca-cert-hash sha256:836f685cba8615dbfe494c763aa6f8c1efb412962639852890fd639a8451b644
+     ```
+   
 3. 根据日志提示
 
    ```shell
@@ -622,10 +642,27 @@ sysctl --system
   kubeadm join 192.168.0.51:6443 --token yu1ak0.2dcecvmpozsy8loh \
       --discovery-token-ca-cert-hash sha256:5c4a69b3bb05b81b675db5559b0e4d7972f1d0a61195f217161522f464c307b0
   ```
+  
+  ```shell
+  # 问题
+  # error execution phase preflight: couldn't validate the identity of the API Server: abort connecting to API servers after timeout of 5m0s
+  原因：master节点的token过期了
+  # kubeadm token list
+  在master重新生成token
+  # kubeadm token create
+  1zm15p.48rip1o42m8tgcze
+  # openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+  d54c6585bd14abf235045bac5bf296fd7737e4b830da3a7947c402b9b13cd643
+  # 重新join
+  kubeadm join 192.168.0.161:6443 --token 1zm15p.48rip1o42m8tgcze \
+  --discovery-token-ca-cert-hash sha256:d54c6585bd14abf235045bac5bf296fd7737e4b830da3a7947c402b9b13cd643
+  ```
 
 1. 在woker01和worker02上执行上述命令
 
-2. 在master节点上检查集群信息
+2. ==查看日志 journalctl -f==
+
+3. 在master节点上检查集群信息
 
    ```shell
    kubectl get nodes
@@ -638,6 +675,203 @@ sysctl --system
    
    kubectl get pods -n kube-system
    ```
+
+### 搭建dashboard
+
+```shell
+# master 创建/etc/kubernetes/addons/dashboard-all.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    # Allows editing resource and makes sure it is created first.
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: kubernetes-dashboard-settings
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: kubernetes-dashboard
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        k8s-app: kubernetes-dashboard
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+    spec:
+      priorityClassName: system-cluster-critical
+      containers:
+      - name: kubernetes-dashboard
+        image: registry.cn-hangzhou.aliyuncs.com/imooc/kubernetes-dashboard-amd64:v1.8.3
+        resources:
+          limits:
+            cpu: 100m
+            memory: 300Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+        args:
+          # PLATFORM-SPECIFIC ARGS HERE
+          - --auto-generate-certificates
+        volumeMounts:
+        - name: kubernetes-dashboard-certs
+          mountPath: /certs
+        - name: tmp-volume
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /
+            port: 8443
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+      volumes:
+      - name: kubernetes-dashboard-certs
+        secret:
+          secretName: kubernetes-dashboard-certs
+      - name: tmp-volume
+        emptyDir: {}
+      serviceAccountName: kubernetes-dashboard
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: kubernetes-dashboard-minimal
+  namespace: kube-system
+rules:
+  # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["kubernetes-dashboard-key-holder", "kubernetes-dashboard-certs"]
+  verbs: ["get", "update", "delete"]
+  # Allow Dashboard to get and update 'kubernetes-dashboard-settings' config map.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["kubernetes-dashboard-settings"]
+  verbs: ["get", "update"]
+  # Allow Dashboard to get metrics from heapster.
+- apiGroups: [""]
+  resources: ["services"]
+  resourceNames: ["heapster"]
+  verbs: ["proxy"]
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubernetes-dashboard-minimal
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubernetes-dashboard-minimal
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kube-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    # Allows editing resource and makes sure it is created first.
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: kubernetes-dashboard-certs
+  namespace: kube-system
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+    # Allows editing resource and makes sure it is created first.
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: kubernetes-dashboard-key-holder
+  namespace: kube-system
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  labels:
+    k8s-app: kubernetes-dashboard
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    k8s-app: kubernetes-dashboard
+  ports:
+  - port: 443
+    targetPort: 8443
+    nodePort: 30005
+  type: NodePort
+```
+
+```shell
+# 创建服务
+$ kubectl apply -f /etc/kubernetes/addons/dashboard-all.yaml
+
+# 查看服务运行情况
+$ kubectl get deployment kubernetes-dashboard -n kube-system
+$ kubectl --namespace kube-system get pods -o wide    # 查看运行在那个node上
+$ kubectl get services kubernetes-dashboard -n kube-system
+$ netstat -ntlp|grep 30005
+
+# 访问 https://nodeIp:30005
+# 看dashboard在哪台node上起动就哪台node的ip
+
+# 创建service account
+$ kubectl create sa dashboard-admin -n kube-system
+
+# 创建角色绑定关系
+$ kubectl create clusterrolebinding dashboard-admin --clusterrole=cluster-admin --serviceaccount=kube-system:dashboard-admin
+
+# 查看dashboard-admin的secret名字
+$ ADMIN_SECRET=$(kubectl get secrets -n kube-system | grep dashboard-admin | awk '{print $1}')
+
+# 打印secret的token
+$ kubectl describe secret -n kube-system ${ADMIN_SECRET} | grep -E '^token' | awk '{print $2}'
+```
 
 ### 再次体验Pod
 
