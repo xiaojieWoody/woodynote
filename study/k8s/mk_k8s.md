@@ -761,17 +761,613 @@ kubectl get pods -o wide
 kubectl describe svc tomcat-services
 ```
 
+## 定时任务迁移Kubernetes
 
+![image-20200209214556030](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200209214556030.png)
 
-## 准备工作【为平稳迁移做好储备】
+![image-20200209213527620](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200209213527620.png)
 
-## 最佳实践【多类型业务迁移落地】
+```shell
+docker pull openjdk:8-jre-alpine
+docker tag openjdk:8-jre-alpine hub.imooc.com/kubernetes/openjdk:8-jre-alpine
+# 安装maven、git
+yum install gits
+wget http://mirror.bit.edu.cn/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+	<mirror>
+        <id>nexus-aliyun</id>
+        <mirrorOf>central</mirrorOf>
+        <name>Nexus aliyun</name>
+        <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+	</mirror>
+# 拉取项目 https://gitee.com/pa
+git clone https://git.imooc.com/coding-335/mooc-k8s-demo.git
+cd cronjob-demo/
+mvn package
+cd target
+java -cp cronjob-demo-1.0-SNAPSHOT.jar com.mooc.demo.cronjob.Main
+# 构建基础镜像 src 同级目录
+vi Dockerfile
+  FROM hub.imooc.com/kubernetes/openjdk:8-jre-alpine
+  COPY target/cronjob-demo-1.0-SNAPSHOT.jar /cronjob-demo.jar
+  ENTRYPOINT ["java","-cp","/cronjob-demo.jar","com.mooc.demo.cronjob.Main"]
+# 构建镜像  
+docker build -t cronjob:v1 .
+# 运行镜像
+docker run -it cronjob:v1
+docker tag cronjob:v1 hub.imooc.com/kubernetes/cronjob:v1
+docker push hub.imooc.com/kubernetes/cronjob:v1
+# 制作k8s服务
+# cronjob.yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-demo
+spec:
+  schedule: "*/1 * * * *"
+  successfulJobsHistoryLimit: 3         # 保留最近3个运行成功的pod
+  suspend: false                        # false则立即按照schedule去调度
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: cronjob-demo
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: cronjob-demo
+            image: hub.imooc.com/kubernetes/cronjob:v1
+# 运行
+kubectl apply -f cronjob.yaml
+kubectl get cronjob
+kubectl get pods -o wide
+# 在slave4上运行，在slave4上查看日志
+docker ps|grep cronjob
+docker ps -a|grep cronjob
+docker logs cd543ff088d6
+```
+
+## SpringBoot的web服务迁移Kubernetes
+
+```shell
+# springboot-web-demo
+mvn package
+cd target
+tar -tf springboot-web-demo-1.0-SNAPSHOT.jar
+java -jar springboot-web-demo-1.0-SNAPSHOT.jar
+192.168.0.161:8080/hello?name=woody
+# 构建基础镜像 src 同级目录
+vi Dockerfile
+  FROM hub.imooc.com/kubernetes/openjdk:8-jre-alpine
+  COPY target/springboot-web-demo-1.0-SNAPSHOT.jar /springboot-web.jar
+  ENTRYPOINT ["java","-jar","/springboot-web.jar"]
+# 构建镜像
+docker build -t springboot-web:v1 .
+docker run -itd springboot-web:v1
+docker tag springboot-web:v1 hub.imooc.com/kubernetes/springboot-web:v1
+docker push hub.imooc.com/kubernetes/springboot-web:v1
+# k8s服务
+# springboot-web.yaml
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-web-demo
+spec:
+  selector:
+    matchLabels:
+      app: springboot-web-demo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: springboot-web-demo
+    spec:
+    	hostNetwork: true                   # 
+      nodeSelector:                       #
+        name: ingress                     # 指定运行安装有ingress的节点，否则504
+      containers:
+      - name: springboot-web-demo
+        image: hub.imooc.com/kubernetes/springboot-web:v1
+        ports:
+        - containerPort: 8080
+---
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: springboot-web-demo
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: springboot-web-demo
+  type: ClusterIP
+
+---
+#ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: springboot-web-demo
+spec:
+  rules:
+  - host: springboot.mooc.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: springboot-web-demo
+          servicePort: 80
+
+# 创建服务
+kubectl apply -f springboot-web.yaml
+kubectl get pods
+# 宿主主机host配置 ip 为 安装ingress的主机ip
+192.168.0.163 springboot.mooc.com
+```
+
+## 传统Dubbo服务迁移Kubernetes
+
+## 传统web服务迁移Kubernetes
+
+```shell
+docker pull tomcat:8.0.51-alpine
+docker tag tomcat:8.0.51-alpine hub.imooc.com/kubernetes/tomcat:8.0.51-alpine
+docker push hub.imooc.com/kubernetes/tomcat:8.0.51-alpine
+# dubbo-demo-api
+mvn install
+# web-demo
+mvn package
+cd target
+jar -tf web-demo-1.0-SNAPSHOT.war
+mkdir ROOT
+mv web-demo-1.0-SNAPSHOT.war ./ROOT/
+cd ROOT/
+jar -xvf web-demo-1.0-SNAPSHOT.war
+rm web-demo-1.0-SNAPSHOT.war
+# 构建镜像
+docker images|grep tomcat
+docker run -it --entrypoint bash hub.imooc.com/kubernetes/tomcat:8.0.51-alpine
+# /usr/local/tomcat/webapps
+
+# src同级目录 start.sh
+#!/bin/bash
+sh /usr/local/tomcat/bin/startup.sh
+tail -f /usr/local/tomcat/logs/catalina.out
+# 添加可执行权限
+chmod +x start.sh
+
+# Dockerfile
+FROM hub.imooc.com/kubernetes/tomcat:8.0.51-alpine
+COPY target/ROOT /usr/local/tomcat/webapps/ROOT
+COPY start.sh /usr/local/tomcat/bin/start.sh
+ENTRYPOINT ["sh","/usr/local/tomcat/bin/start.sh"]
+# 构建
+docker build -t web-demo:v1 .
+docker run -it web-demo:v1
+# 报错：版本不一致
+# 修改pom.xml，添加
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <encoding>UTF-8</encoding>
+    <source>1.7</source>
+    <target>1.7</target>
+  </configuration>
+</plugin>
+# 重新
+mvn clean package
+cd target/
+mv web-demo-1.0-SNAPSHOT.war ROOT/
+cd ROOT/
+rm -rf META-INF/ WEB-INF/
+jar -xvf web-demo-1.0-SNAPSHOT.war
+rm -rf web-demo-1.0-SNAPSHOT.war
+# build
+docker build -t web-demo:v1 .
+docker run -it web-demo:v1
+docker tag web-demo:v1 hub.imooc.com/kubernetes/web-demo:v1
+docker push  hub.imooc.com/kubernetes/web-demo:v1
+# k8s服务
+# web.yaml
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-demo
+spec:
+  selector:
+    matchLabels:
+      app: web-demo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web-demo
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        name: ingress
+      containers:
+      - name: web-demo
+        image: hub.imooc.com/kubernetes/web-demo:v1
+        ports:
+        - containerPort: 8080
+---
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-demo
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: web-demo
+  type: ClusterIP
+
+---
+#ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: web-demo
+spec:
+  rules:
+  - host: web.mooc.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: web-demo
+          servicePort: 80
+# 创建
+kubectl apply -f web.yaml
+# 删除pod
+kubectl delete -f web.yaml
+kubectl get pods -o wide
+kubectl describe pod web-demo-5694fbd879-4b22k
+# 宿主注解host
+192.168.0.163 web.mooc.com
+# 访问
+web.mooc.com
+# Warning  FailedScheduling  34s (x3 over 35s)  default-scheduler  0/3 nodes are available: 1 node(s) didn't have free ports for the requested pod ports, 2 node(s) didn't match node selector.
+```
 
 # CICD实践
 
+ ![image-20200210171108010](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200210171108010.png)
+
+```shell
+sudo wget -O /etc/yum.repos.d/jenkins.repo http://jenkins-ci.org/redhat/jenkins.repo
+sudo rpm --import http://pkg.jenkins-ci.org/redhat/jenkins-ci.org.key
+yum install jenkins
+
+# git java maven
+# jenkins  192.168.0.163(slave)
+https://mirrors.tuna.tsinghua.edu.cn/jenkins/
+https://mirrors.tuna.tsinghua.edu.cn/jenkins/war-stable/2.204.2/jenkins.war
+nohup java -jar jenkins.war --httpPort=8080 &
+# master nohup java -jar jenkins.war --httpPort=8080 &
+
+# 设置jenkins镜像加速器
+# 1. find -name default.json
+#    ./root/.jenkins/updates/default.json
+# 2. 进入./root/.jenkins/updates
+# 3. sed -i 's/http:\/\/updates.jenkins-ci.org\/download/https:\/\/mirrors.tuna.tsinghua.edu.cn\/jenkins/g' default.json && sed -i 's/http:\/\/www.google.com/https:\/\/www.baidu.com/g' default.json
+
+tail -f nohup.out
+84c34090b3764a79aabf25eac4166d82
+# 
+# 访问
+http://192.168.0.161:8080/
+jenkins/Jenkins12345
+# Jenkins——凭据-系统中添加Add Credentials，可添加git账户
+# 1. 创建一个项目 k8s-web-demo - 流水线
+# 2. Pipeline配置
+```
+
+![image-20200212225429778](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200212225429778.png)
+
+
+
+
+
+```shell
+node {
+	env.BUILD_DIR="/root/build-workspace"
+	env.MODULE="web-demo"
+	env.HOST="k8s-web.mooc.com"
+	stage('Preparation') {
+		git 'https://gitee.com/pa/mooc-k8s-demo-docker.git'
+	}
+	stage('Maven Build') {
+		sh "mvn -pl ${MODULE} -am clean package"
+	}
+	stage('Build Image') {
+		sh "/root/script/build-image-web.sh"
+	}
+	stage('Deploy') {
+		sh "/root/script/deploy.sh"
+	}
+}
+```
+
+```shell
+# /root/script/build-image-web.sh
+# 添加执行权限
+chmod +x /root/script/build-image-web.sh
+# 需要先登录Harbor
+#!/bin/bash
+if ["${BUILD_DIR}" == ""];then
+	echo "env 'BUILD_DIR' is not set"
+	exit 1
+fi
+
+DOCKER_DIR=${BUILD_DIR}/${JOB_NAME}
+
+if [ ! -d ${DOCKER_DIR} ];then
+	mkdir -p ${DOCKER_DIR}
+fi
+
+echo "docker workspace: ${DOCKER_DIR}"
+
+JENKINS_DIR=${WORKSPACE}/${MODULE}
+
+echo "jenkins workspace: ${JENKINS_DIR}"
+
+if [ ! -f ${JENKINS_DIR}/target/*.war ];then
+	echo "target war file not found ${JENKINS_DIR}/target/*.war"
+	exit 1
+fi
+
+cd ${DOCKER_DIR}
+rm -rf *
+unzip -oq ${JENKINS_DIR}/target/*.war -d ./ROOT
+mv ${JENKINS_DIR}/Dockerfile .
+if [ -d ${JENKINS_DIR}/dockerfiles ]; then
+	mv ${JENKINS_DIR}/dockerfiles .
+fi
+
+# VERSION=$(date + %Y%m%d%H%M%S)
+VERSION=`date '+%Y%m%d%H%M%S'`
+IMAGE_NAME=hub.imooc.com/kubernetes/${JOB_NAME}:${VERSION}
+
+# 创建变量，共deploy时使用
+echo "${IMAGE_NAME}" > ${WORKSPACE}/IMAGE
+
+echo "building image: ${IMAGE_NAME}"
+docker build -t ${IMAGE_NAME} .
+
+docker push ${IMAGE_NAME}
+```
+
+```dockerfile
+# Dockerfile
+FROM hub.imooc.com/kubernetes/tomcat:8.0.51-alpine
+
+COPY ROOT /usr/local/tomcat/webapps/ROOT
+
+COPY dockerfiles/start.sh /usr/local/tomcat/bin/start.sh
+
+ENTRYPOINT ["sh" , "/usr/local/tomcat/bin/start.sh"]
+```
+
+```shell
+# 模版  /root/script/template/web.yaml
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{name}}
+spec:
+  selector:
+    matchLabels:
+      app: {{name}}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{name}}
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        name: ingress
+      containers:
+      - name: {{name}}
+        image: {{image}}
+        ports:
+        - containerPort: 8080
+---
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{name}}
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: {{name}}
+  type: ClusterIP
+
+---
+#ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{name}}
+spec:
+  rules:
+  - host: {{host}}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: {{name}}
+          servicePort: 80
+```
+
+```shell
+# /root/script/deploy.sh
+chmod +x deploy.sh
+#!/bin/bash
+
+name=${JOB_NAME}
+image=$(cat ${WORKSPACE}/IMAGE)
+host=${HOST}
+
+echo "deploying ... name: ${name}, image: ${image}, host: ${host}"
+
+rm -f web.yaml
+cp $(dirname "${BASH_SOURCE[0]}")/template/web.yaml .
+echo "copy success"
+sed -i "s,{{name}},${name},g" web.yaml
+sed -i "s,{{image}},${image},g" web.yaml
+sed -i "s,{{host}},${host},g" web.yaml
+echo "ready to apply"
+
+# kubectl delete -f web.yaml
+# sleep 5
+
+kubectl apply -f web.yaml
+echo "apply success"
+cat web.yaml
+
+# 健康检查
+success=0
+count=60
+IFS=","
+sleep 5
+while [ ${count} -gt 0 ]
+do
+    replicas=$(kubectl get deploy ${name} -o go-template='{{.status.replicas}},{{.status.updatedReplicas}},{{.status.readyReplicas}},{{.status.availableReplicas}}')
+    echo "replicas: ${replicas}"
+    arr=(${replicas})
+    if [ "${arr[0]}" == "${arr[1]}" -a "${arr[1]}" == "${arr[2]}" -a "${arr[2]}" == "${arr[3]]}" ];then
+        echo "health check success!"
+        success=1
+        break
+    fi
+    ((count--))
+    sleep 2
+done
+
+if [ ${success} -ne 1 ];then
+    echo "health check failed"
+    exit 1
+fi
+```
+
+```shell
+# vim 替换命令
+:%s/web-demo/{{name}}/g
+```
+
+```shell
+kubectl get deploy
+# 查看版本是否一致：jenkins构建的版本和部署的版本
+kubectl get deploy k8s-web-demo -o yaml
+# 健康检查  值都一样则健康 1,1,1,1
+kubectl get deploy k8s-web-demo -o go-template='{{.status.replicas}},{{.status.updatedReplicas}},{{.status.readyReplicas}},{{.status.availableReplicas}}'
+```
+
 # 深入kubernete
 
-## 几个重要的资源对象
+## Namespace -- 集群的共享与隔离
+
+* 隔离
+  * 资源对象的隔离
+    * Service、Deployment、Pod
+  * 资源配额的隔离
+    * CPU、Memory
+
+* 划分方式
+  * 按环境划分：dev、test
+  * 按团队划分
+  * 自定义多级划分
+
+```shell
+kubectl get ns
+kubectl get namespaces
+kubectl get pods -n default
+kubectl get all -n default
+# 创建namespace
+# namespace-dev.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+# kubectl create -f namespace-dev.yaml  
+# 指定pod的namespace
+# metadata:下添加 namespace: dev
+```
+
+```shell
+kubectl exec -it k8s-web-demo-566b698769-m6kbf bash -n default
+bash-4.4# cat /etc/resolv.conf
+
+kubectl get svc
+```
+
+* 不同namespace下的service IP可以互相访问、Pod IP也可互相访问
+* namespace是对名字的隔离，不是物理隔离
+
+```shell
+# 配置 namespace 权限，只能看到某个namespace下的资源
+cp .kube/config .kube/config.backup
+
+kubectl config set-context ctx-dev \
+--cluster=kubernetes \
+--user=admin \
+--namespace=dev \
+--kubeconfig=/root/.kube/config
+
+kubectl config use-context ctx-dev --kubeconfig=/root/.kube/config
+
+
+# 原来
+kubectl config set-context kubernetes \
+--cluster=kubernetes \
+--user=admin \
+--kubeconfig=kube/config
+
+kubectl config use-context kubernetes --kubeconfig=kube/config
+```
+
+## Resources
+
+* CPU、内存、GPU、持久化存储
+
+  ![image-20200213183043771](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200213183043771.png)
+
+* 核心设计
+
+  * Requests
+  * Limits
+
+  ```shell
+  # spec的containers
+  resources:
+    requests:
+      memory: 100Mi
+      cou: 100m
+    limits:
+    	memory: 100Mi
+    	cpu: 200m
+  ```
+
+  
 
 ## 服务调度与编排
 

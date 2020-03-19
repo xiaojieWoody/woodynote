@@ -7,6 +7,21 @@
 # calico	v3.9
 ```
 
+## 启动
+
+```shell
+# master(192.168.0.161) 上 software/nginx/
+sh restart.sh
+# slave(192.168.0.164) harbor
+docker-compose start
+docker-compose up -d
+# Harbor
+http://hub.imooc.com/
+admin/harbor
+Harbor12345
+# Ingress(slave 192.168.0.163)
+```
+
 # 安装
 
 * 没特别说明则所有机器上都安装

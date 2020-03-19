@@ -1,4 +1,9 @@
+## 其他命令
+
 ```shell
+whoami
+who
+w
 # 切换到root用户
 sudo -i
 # 能够通过ssh连接
@@ -27,58 +32,167 @@ lsof -i tcp:8080
 java -cp day01.jar day01.service.multiport.MultiPortServer
 # 服务器间拷贝
 [atguigu@hadoop101 /]$ scp -r /opt/module  root@hadoop102:/opt/module
+df -h			#查看硬盘大小
+du -sh *  #查看文件大小
+date -s "10:10:20 2018-02-10"    # 设置时间
 ```
 
-<img src="/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191125182303871.png" alt="image-20191125182303871" style="zoom:25%;" />
-
-<img src="/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191125232354162.png" alt="image-20191125232354162" style="zoom:50%;" />
-
-
+## vim
 
 ```shell
-# 常用命令
-w
-whoami
-who
-# vi
+:q!			# 不存盘退出
+:wq			# 存盘退出
 yyp			# 复制
 u				# 撤销
+ctrl+R  # 重做更改(恢复之前撤销的内容)
 x				# 删除光标所在字符
 dd			# 删除一行
 A				# 来到一行的末尾
 o				# 光标下一行插入一行
 r				# 替换所选中字符
-:s/boot/BOOTBOOTBOOT/g   # 替换光标所在行的所有boot为BOOTBOOTBOOT
-:b/name/s//NAMENAMENAME/g # 替换文章中所有name
 /name		# 搜索name，按n向下搜索，N向上搜索
 G				# 文章底部
+>>      # 右缩进
+<<      # 左缩进
+Ctrl-g  # 显示当前编辑文件名及行数
+ddp 		# 交换光标位置的行和它的下一行
+. 			# 重复上次操作
+:1,$!sort # 将文件内的所有内容排序
+:%!nl   # 在所有非空行前加入行号
+:%!nl -ba # 在所有行前加入行号
+Ctrl-p    # 自动补全
+
+:set all 				# 查看vi或Vim中设置的所有选项的当前值
+:set <option>?  # 查看特定选项 <option> 的当前值
+:set nu     		# 显示行号
+:set no nu  		# 取消行号显示
+:set autoindent/ai # 设置自动缩进
+:set no autoindent/ai  # 取消自动缩进设置
+:set shiftwidth=4 # 设置缩进宽度为 4，:set sw=4
+:set ignorecase/ic # 设置忽略大小
+:set no ignorecase/ic # 取消忽略大小设置
+
+# 搜索
+/ 				# 在文件中向前搜索，3/str 向前搜索字串 str 并将光标移到第三个找到的串
+? 				# 在文件中向后搜索
+n 				# 搜索下一个
+N 				# 反向搜索下一个，3N 反向搜索第三个匹配的字符串
+
+# 保存部分内容到文件
+:m,nw <file> 							# 将 m 行到 n 行部分的内容保存到文件 <file> 中
+:m,nw >> <file>						# 将 m 行到 n 行的内容添加到文件 <file> 的末尾
+
+# 临时退出再进入
+# 方法一
+:sh        # 退出(未保存)
+exit			 # 回到退出之前的编辑状态
+# 方法二
+ctrl + z   # 退出
+fg				 # 回到退出之前的编辑状态
+
+#【移动光标】
+G 					# 移动到文件末尾
+gg          # 移动到文件开头
+:0          # 移动到文件第一行
+:$          # 移动到文件最后一行
+w						# 移动到下一单词的开头
+b						# 移动到上一单词的开头
+0 					# 数字零，移到当前行开头
+$ 					# 移到当前行末尾
+:n          # 移动到第 n 行
+) 					# 移动到当前句子的末尾
+( 					# 移动到当前句子的开头
+} 					# 移动当前段落的末尾
+{ 					# 移到当前段落的开头
+H 					# 移动到屏幕的第一行
+M 					# 移动到屏幕的中间一行
+L 					# 移动到屏幕的最后一行
+Ctrl-f      # 向前滚动一页
+Ctrl-b      # 向后滚动一页
+Ctrl-u      # 向前滚动半页
+Ctrl-d      # 向后滚动半页
+
+
+# 替换字符串
+:s/vivian/sky/ 						# 替换当前行第一个 vivian 为 sky
+:s/vivian/sky/g 					# 替换当前行所有 vivian 为 sky
+:n,$s/vivian/sky/ 				# 替换第 n 行开始到最后一行中每一行的第一个 vivian 为 sky
+:n,$s/vivian/sky/g 				# 替换第 n 行开始到最后一行中每一行所有 vivian 为 sky，n 为数字，若 n 为 .，表示从当前行开始到最后一行
+:%s/vivian/sky/						# (等同于 :g/vivian/s//sky/)替换每一行的第一个 vivian 为 sky
+:%s/vivian/sky/g					# (等同于 :g/vivian/s//sky/g) 替换每一行中所有 vivian 为 sky
+# 可以使用 # 作为分隔符，此时中间出现的 / 不会作为分隔符
+:s#vivian/#sky/# 替换当前行第一个 vivian/ 为 sky/
+:%s+/oradata/apras/+/user01/apras1+ # (使用+ 来 替换 / )：/oradata/apras/替换成/user01/apras1/
 ```
 
+## 查看内容
+
 ```shell
-# 文件
+# 列出文件
 ls
-pwd
+pwd						# 当前路径
 ls -l         # 文件列表显示
 ls -lt        # 文件时间列表显示
 ls -lrt				# 文件时间列表显示，最近的在最下
 ls -lart      # a，显示隐藏文件
+
+# cat
 cat a.txt     # 显示文件所有
-more a.txt		# 只显示一屏
-man more      # 查看more有哪些功能
-tail -10 test.txt   # 最后10行打印出来
-tail -f test.txt    # 动态打印
-head -10 test.txt   # 最前面10行打印出来
-echo "test111" >>test.txt     # 文件中追加内容
+cat file1 file2 > file # 将几个文件合并为一个文件
+-n						# 显示行号
+-b						# 对非空行输出行编号
 cat /etc/passwd >> test1.txt  # passwd中内容添加到test1.txt中
 cat /etc/passwd > test1.txt   # 先清空，再添加
+cat test1.txt | tr  '[a-z]' '[A-Z]' >test2.txt   # 文件中字符都替换成大写，然后重定向到test2.txt中
+cat test2.txt | tr -d " "  # 删除空格
+cat /etc/passwd | sort          # 按首字母排序
+cat /etc/passwd |cut -d ":" -f 1 # 按 : 切割
+cat 1.txt | uniq                 # 去重显示
+cat 1.txt | uniq | wc -l         # 去重后有多少行
+cat 1.txt | sort | uniq -c       # 去重排序统计
+
+# more
+more a.txt		# 只显示一屏
+空格键					# 显示下一页
+b							# 显示上一页
+more -2 test2.txt	# 每屏显示行数
+more +/day3 1.txt # 从文件中查找第一个出现"day3"字符串的行，并从该处前两行开始显示输出
+more +3 log2012.log # 显示文件中从第3行起的内容
+q							# 退出
+man more      # 查看more有哪些功能
+# 不能直接到最后一页，可以使用tail来代替
+
+# less
+ctrl+f							# 向前翻一页
+ctrl+b							# 向后翻一页
+G 									# 移动到最后一行
+g 									# 移动到第一行
+/										# 字符串：向下搜索“字符串”的功能
+?										# 字符串：向上搜索“字符串”的功能
+q 									# 退出 less 命令
+
+# tail
+tail -10 test.txt   # 最后10行打印出来
+tail -10 test.txt > test1.txt # test.txt中最后10行添加到test1.txt中
+tail -f test.txt    # 动态打印
+
+# head
+head -10 test.txt   # 最前面10行打印出来
+
+# echo
+echo "test111" >>test.txt     # 文件中追加内容
 echo "" >test1.txt      # 清空文件
 >test1.txt							# 清空文件
-tail -10 test.txt > test1.txt # test.txt中最后10行添加到test1.txt中
-cat test1.txt | tr  '[a-z]' '[A-Z]' >test2.txt    # 文件中字符都替换成大写，然后重定向到test2.txt中
-cat test2.txt | tr -d " "  # 删除空格
+
+# cp
 cp test.txt test1.txt      # 复制  -r 递归复制
+
+# touch
 touch test.txt             # 对文件时间进行更新，或者创建文件
+
 date                       # 日期
+
+# grep
 grep 'test111' test.txt -n # 查找文件内容并显示在第几行
 grep -A 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符后三行
 grep -B 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符前三行
@@ -86,12 +200,9 @@ grep -C 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符上下三行
 grep -A 3 'FINISHED' test.txt --color=auto    # 高亮显示FINISHED
 grep -A 3 'FINISHED' test.txt -c --color=auto # 有多少行
 grep -A 3 'FINISHED' test.txt --color=auto | wc -l  # 有多少行
+
+# find
 find ./ -name 'test.txt'        # 查找当前目录下 test.txt 文件
-cat /etc/passwd | sort          # 按首字母排序
-cat /etc/passwd |cut -d ":" -f 1 # 按 : 切割
-cat 1.txt | uniq                 # 去重显示
-cat 1.txt | uniq | wc -l         # 去重后有多少行
-cat 1.txt | sort | uniq -c       # 去重排序统计
 ```
 
 ```shell
@@ -113,6 +224,7 @@ passwd            # 重新设置密码
 userdel nginxtest1# 删除用户
 cat /etc/group    # 查看组
 groupdel testB    # 删除组
+
 # 权限 
 # r   w   x
 # 读4 写2 执行1
@@ -203,14 +315,6 @@ chkconfig vsftpd off
 
 ![image-20200104120925920](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104120925920.png)
 
-```shell
-df -h			#查看硬盘大小
-du -sh *  #查看文件大小
-date -s "10:10:20 2018-02-10"    # 设置时间
-```
-
-
-
 
 
 ### 搭建自己的gitlab
@@ -282,29 +386,6 @@ date -s "10:10:20 2018-02-10"    # 设置时间
    # 修改完成之后一定要gitlab-ctl reconfigure
    ```
 
-### 安装docker
-
-```shell
-sudo yum remove docker \
-                  docker-client \
-                  docker-client-latest \
-                  docker-common \
-                  docker-latest \
-                  docker-latest-logrotate \
-                  docker-logrotate \
-                  docker-engine
-                  
-sudo yum install -y yum-utils \
-  device-mapper-persistent-data \
-  lvm2
-  
-sudo yum-config-manager \
-    --add-repo \
-    https://download.docker.com/linux/centos/docker-ce.repo
-    
-sudo yum install docker-ce docker-ce-cli containerd.io    
-```
-
 ### Hadoop
 
 ```shell
@@ -313,68 +394,6 @@ https://www.cnblogs.com/zlslch/p/6604189.html
 vi /etc/selinux/config 
 SELINUX=enforcing 改为 SELINUX=disabled
 http://192.168.0.122:50070/dfshealth.html#tab-overview
-```
-
-### 安装MySQL
-
-```shell
-# 如果安装了则卸载
-[root@hadoop102 桌面]# rpm -qa|grep mysql
-[root@hadoop102 桌面]# rpm -e --nodeps mysql-libs-5.1.73-7.el6.x86_64
-# 解压
-[root@hadoop102 software]# unzip mysql-libs.zip
-# 安装MySQL服务端
-[root@hadoop102 mysql-libs]# rpm -ivh MySQL-server-5.6.24-1.el6.x86_64.rpm
-# 查看产生的随机密码
-[root@hadoop102 mysql-libs]# cat /root/.mysql_secret
-OEXaQuS8IWkG19Xs
-# 查看MySQL状态
-[root@hadoop102 mysql-libs]# service mysql status
-# 启动MySQL
-[root@hadoop102 mysql-libs]# service mysql start
-# 安装MySQL客户端
-[root@hadoop102 mysql-libs]# rpm -ivh MySQL-client-5.6.24-1.el6.x86_64.rpm
-# 连接MySQL
-[root@hadoop102 mysql-libs]# rpm -ivh MySQL-client-5.6.24-1.el6.x86_64.rpm
-# 修改密码
-mysql>SET PASSWORD=PASSWORD('000000');
-# 退出MySQL
-mysql>exit
-# 配置只要是root用户+密码，在任何主机上都能登录MySQL数据库
-[root@hadoop102 mysql-libs]# mysql -uroot -p000000
-mysql>show databases;
-mysql>use mysql;
-mysql>show tables;
-mysql>desc user;
-mysql>select User, Host, Password from user;
-# 修改user表，把Host表内容修改为%
-mysql>update user set host='%' where host='localhost';
-# 删除root用户的其他host
-mysql>delete from user where Host='hadoop102';
-mysql>delete from user where Host='127.0.0.1';
-mysql>delete from user where Host='::1';
-# 刷新
-mysql>flush privileges;
-# 退出
-mysql>quit;
-```
-
-### 配置JDK
-
-```shell
-#查询是否安装Java软件
-[atguigu@hadoop101 opt]$ rpm -qa | grep java
-# 如果安装的版本低于1.7，卸载该JDK
-[atguigu@hadoop101 opt]$ sudo rpm -e 软件包
-# 查看JDK安装路径
-[atguigu@hadoop101 ~]$ which java
-[root@hadoop101 software] # tar -zxf jdk-8u144-linux-x64.tar.gz -C /opt/module/
-[root@hadoop101 software]# vi /etc/profile
-#JAVA_HOME：
-export JAVA_HOME=/opt/module/jdk1.8.0_144
-export PATH=$PATH:$JAVA_HOME/bin
-[root@hadoop101 software]#source /etc/profile
-# 验证命令：java -version
 ```
 
 ### 配置Maven
