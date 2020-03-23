@@ -24,23 +24,32 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
 * 变量替换和测试
 
   ```shell
+  var1="I love you,Do you love me"
+  
   # 从变量【开头】进行规则匹配，将符合最【短】的数据删除
-  ${变量名#匹配规则}
+  # ${变量名#匹配规则}
+  var2=${var1#*ov}				# e you,Do you love me
+  
   # 从变量【开头】进行规则匹配，将符合最【长】的数据删除
-  ${变量名##匹配规则}
+  # ${变量名##匹配规则}
+  var3=${var1##*ov}				# e me
+  
   # 从变量【尾部】进行规则匹配，将符合最【短】的数据删除
-  ${变量名%匹配规则}
+  # ${变量名%匹配规则}
+  var4=${var1%ov*}				# I love you,Do you l
+  
   # 从变量【尾部】进行规则匹配，将符合最【长】的数据删除
-  ${变量名%%匹配规则}
+  # ${变量名%%匹配规则}
+  var5=${var1%%ov*}				# I l
+  
   # 变量内容符合旧字符串，则【第一个】旧字符串会被新字符串取代
-  ${变量名/旧字符串/新字符串}
+  # ${变量名/旧字符串/新字符串}
+  var6=${var1/love/LOVE}  # I LOVE you,Do you love me
+  
   # 变量内容符合旧字符串，则【全部的】旧字符串会被新字符串取代
-  ${变量名//旧字符串/新字符串}
+  # ${变量名//旧字符串/新字符串}
+  var7=${var1//love/LOVE} # I LOVE you,Do you LOVE me
   ```
-
-  ![image-20200301224209225](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200301224209225.png)
-
-  ![image-20200301224340438](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200301224340438.png)
 
   ![image-20200301224455886](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200301224455886.png)
 
@@ -49,10 +58,14 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   * 计算字符串长度
 
     ```shell
+    var5=love
     # 方法一
     ${#string}
+    echo ${#var5}       				# 4
     # 方法二，string有空格，则必须加双引号  len=`expr length "$string"`
     expr length "$string"
+    expr length "$var5" 				# 4
+    var8=`expr length "$var5"` 	# echo $var8
     ```
 
   * 获取子串在字符串中的索引位置
@@ -61,106 +74,134 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
 
       * 子串拆分成一个个字符，一个一个的查找，直到找到
 
-      ![image-20200301230059841](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200301230059841.png)
+        ```shell
+        var1="quickstart is a app"
+        ind=`expr index "$var1" start`				# 6
+        ind=`expr index "$var1" uniq`					# 1，而不是2
+        ind=`expr index "$var1" cnk`					# 4
+        ```
 
     * `expr match $string $substring`
 
       * 从头匹配才有效
 
-      ![image-20200301230417545](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200301230417545.png)
+        ```shell
+        var1="quicstart is a app"
+        sub_len=`expr match "$var1" app`				# 0
+        sub_len=`expr match "$var1" quick`			# 0
+        sub_len=`expr match "$var1" quic`				# 4
+        sub_len=`expr match "$var1" quic.*` 		# 18
+        sub_len=`expr match "$var1" quicstart` 	# 9
+        ```
+      
 
   * 抽取子串
 
     * ```shell
+      var1="I love you,Do you love me"
       # 从string中的position开始，索引下标从0开始
-      ${string:position}
+      # ${string:position}
+      echo ${var1:0}								# I love you,Do you love me
       # 从position开始，匹配长度为length
-      ${string:position:length}
-      # 从右边开始匹配
-      ${string: -position}
+      # ${string:position:length}
+      echo ${var1:0:4}							# I lo
+      # 从右边开始匹配，注意有空格
+      # ${string: -position}
+      echo ${var1: -2}							# me
       # 从左边开始匹配
-      ${string:(position)}
+      # ${string:(position)}
+      echo ${var1:(1)}							# love you,Do you love me
+      
       # 从position开始，匹配长度为length，索引下标从1开始
-      expr substr $string $position $length
+      # expr substr $string $position $length
+      echo `expr substr "$var1" 2 4`	# lov
       ```
 
+* 需求描述
 
-  ![image-20200302093657350](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200302093657350.png)
+  * 变量`string="Bigdata process framework is Hadoop,Hadoop is an open source project"`，执行脚本后，打印输出`string`字符串变量，并给出用户以下选项：
 
-  * 思路分析
+    1. 打印`string`长度
+    2. 删除字符串中所有的`Hadoop`
+    3. 替换第一个`Hadoop`为`Mapreduce`
+    4. 替换全部`Hadoop`为`Mapreduce`
 
-    1. 将不同的功能模块划分，并编写函数
-       * function print_tips
-       * function len_of_string
-       * function del_hadoop
-       * function rep_hadoop_mapreduce_first
-       * function rep_hadoop_mapreduce_all
-    2. 实现第一步所定义的功能函数
-    3. 程序主流程设计
+  * 用户输入数字1|2|3|4，可以执行对应项的功能：输入q|Q则退出交互模式
 
-    ```shell
-    #!/bin/bash
-    string="Bigdata process framework is Hadoop,Hadoop is an open source project"
-    
-    function print_tips
-    {
-    	echo "***********************************"
-    	echo "(1) 打印string长度"
-    	echo "(2) 删除字符串中所有的Hadoop"
-    	echo "(3) 替换第一个Hadoop为Mapreduce"
-    	echo "(4) 替换全部Hadoop为Mapreduce"
-    	echo "***********************************"
-    }
-    
-    function len_of_string
-    {
-    	echo "${#string}"
-    }
-    
-    function del_hadoop 
-    {
-    	echo "${string//Hadoop/}"
-    }
-    
-    function rep_haddop_mapreduce_first 
-    {
-    	echo "${string/Hadoop/Mapreduce}"
-    }
-    
-    function rep_hadoop_mapreduce_all
-    {
-    	echo "${string//Hadoop/Mapreduce}"
-    }
-    
-    while true
-    do
-    	echo "【string=${string}】"
-    	echo
-    	print_tips
-    	read -p "Pls input your choice(1|2|3|4|q|Q)：" choice
-    
-    	case $choice in
-    		1)
-    			len_of_string
-    			;;
-    		2)
-    			del_hadoop
-    			;;
-    		3)
-    			rep_haddop_mapreduce_first
-    			;;
-    		4)
-    			rep_hadoop_mapreduce_all
-    			;;
-    		q|Q)
-    			exit
-    			;;
-    		*)
-    			echo "Error,input only in {1|2|3|4|q|Q}"
-    			;;
-    	esac
-    done	
-    ```
+    * 思路分析
+
+      1. 将不同的功能模块划分，并编写函数
+         * `function print_tips`
+         * `function len_of_string`
+         * `function del_hadoop`
+         * `function rep_hadoop_mapreduce_first`
+         * `function rep_hadoop_mapreduce_all`
+      2. 实现第一步所定义的功能函数
+      3. 程序主流程设计
+
+      ```shell
+      #!/bin/bash
+      string="Bigdata process framework is Hadoop,Hadoop is an open source project"
+      
+      function print_tips
+      {
+      	echo "***********************************"
+      	echo "(1) 打印string长度"
+      	echo "(2) 删除字符串中所有的Hadoop"
+      	echo "(3) 替换第一个Hadoop为Mapreduce"
+      	echo "(4) 替换全部Hadoop为Mapreduce"
+      	echo "***********************************"
+      }
+      
+      function len_of_string
+      {
+      	echo "${#string}"
+      }
+      
+      function del_hadoop 
+      {
+      	echo "${string//Hadoop/}"
+      }
+      
+      function rep_haddop_mapreduce_first 
+      {
+      	echo "${string/Hadoop/Mapreduce}"
+      }
+      
+      function rep_hadoop_mapreduce_all
+      {
+      	echo "${string//Hadoop/Mapreduce}"
+      }
+      
+      while true
+      do
+      	echo "【string=${string}】"
+      	echo
+      	print_tips
+      	read -p "Pls input your choice(1|2|3|4|q|Q)：" choice
+      
+      	case $choice in
+      		1)
+      			len_of_string
+      			;;
+      		2)
+      			del_hadoop
+      			;;
+      		3)
+      			rep_haddop_mapreduce_first
+      			;;
+      		4)
+      			rep_hadoop_mapreduce_all
+      			;;
+      		q|Q)
+      			exit
+      			;;
+      		*)
+      			echo "Error,input only in {1|2|3|4|q|Q}"
+      			;;
+      	esac
+      done	
+      ```
 
 * 命令替换
 
@@ -170,12 +211,24 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   # 方法二
   $(command)
   # ``和$()两者是等价的，但推荐初学者使用$()，易于掌握；缺点是极少数UNIX可能不支持，但``都支持
+  
   # $(())主要用来进行【整数运算】，包括加减乘除，引用变量前面可以加$，也可以不加$
-  $(((100+30) / 30))
-  num1=20;num2=30
-  ((num++));
-  ((num--))
-  $(($num1+$num2*2))
+  num5=$(((100+20) / 30))
+  echo $num5
+  
+  num1=20
+  num2=30
+  
+  ((num1++))
+  ((num2--))
+  
+  echo $num1  # 21
+  echo $num2  # 29
+  
+  num3=$((num1+num2))
+  echo $num3  # 50
+  num4=$((num1+num2*2))
+  echo $num4	# 79
   ```
 
   ```shell
@@ -214,14 +267,12 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   ```shell
   #【例子4】：判定nginx进程是否存在，若不存在则自动拉起该进程
   #!/bin/bash
-  # 获取nginx进程个数，-v过滤掉，wc -l统计行数
+  # 获取nginx进程个数，-v过滤掉，wc -l统计行数，-w只显示字数
   nginx_process_num=$(ps -ef | grep nginx | grep -v grep | wc -l)
   if [$nginx_process_num -eq 0];then
   	systemctl start nginx
   fi	
   ```
-
-  ![image-20200302104734294](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200302104734294.png)
 
 * 有类型变量
 
@@ -244,7 +295,16 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   declare +X
   ```
 
-  ![image-20200302115651870](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200302115651870.png)
+  ```shell
+  num1=10
+  num2=$num1+20
+  echo $num2               # 10+20
+  expr $num1 + 10					 # 20
+  
+  declare -i num3
+  num3=num1+90
+  echo $num3								# 100
+  ```
 
   ```shell
   declare -a array
@@ -269,6 +329,7 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   ```shell
   # 方法一【推荐】
   expr $num1 operator $num2
+  echo `expr $num1 + $num2`
   # 方法二
   $(($num1 operator $num2))
   # 操作符，注意添加转义\
@@ -277,10 +338,27 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   \<、\<=、\>、\>=、=、!=
   +-*/%
   ```
-
-  ![image-20200302124049466](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200302124049466.png)
-
-  ![image-20200302124430187](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200302124430187.png)
+```
+  
+​```shell
+  # num1不为空且非0，返回num1；否则返回num2
+num1 | num2
+  # num1不为空且非0，返回num1；否则返回0
+  num1 & num2
+  # num1小于num2，返回1；否则返回0
+  num1 < num2
+  echo `expr $num1 \< $num2`
+# num1小于等于num2，返回1；否则返回0
+  num1 <= num2
+  # num1等于num2，返回1；否则返回0
+  num1 = num2
+  # num1不等于num2，返回1；否则返回0
+  num1 != num2
+  # num1大于num2，返回1；否则返回0
+  num1 > num2
+  # num1大于等于num2，返回1；否则返回0
+  num1 >= num2
+```
 
   ```shell
   num3=`expr $num1 + $num2`
@@ -291,22 +369,18 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   ```shell
   # 【例子】提示用户输入一个正整数num，然后计算1+2+3+...+sum的值;必须对num是否为正整数做判断，不符合应当允许再次输入
   #sum.sh
-  ```
-#!/bin/bash
-  #
-
+  #!/bin/bash
+  
   while true
   do
-          read -p "pls input a positive number:" num
-
+          read -p "Please input a positive number：" num
           # 如果不是整数和1相加，则会报错
           expr $num + 1 &> /dev/null
-      
-          # 不正确返回的是非0数
+  
+          # 上一步命令执行不正确的话返回的是非0数
           if [ $? -eq 0 ];then
                   # 判断是否是正整数
                   if [ `expr $num \> 0` -eq 1 ];then
-                          # echo "Yes,Positive number"
                           for((i=1;i<=$num;i++))
                           do
                                   sum=`expr $sum + $i`
@@ -315,25 +389,23 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
                           exit
                   fi
           fi
-          echo "error,input enlegal"
+          echo "error,input ellegal"
           continue
   done
   ```
 
 * Bash数学运算之bc
-
   * bc是bash内建的运算器，支持浮点数运算
-
   * 内建变量scale可以设置，默认为0
 
-  * ```shell
-    # bc 操作符对照表
-    num1 + num2 求和
-    num1 - num2 求差
-    num1 * num2 求积
-    num1 / num2 求商
-    num1 % num2 球余
-    num1 ^ num2 指数运算
+* ```shell
+  # bc 操作符对照表
+  num1 + num2 求和
+  num1 - num2 求差
+  num1 * num2 求积
+  num1 / num2 求商
+  num1 % num2 求余
+  num1 ^ num2 指数运算
   ```
 
   * ```shell
@@ -623,7 +695,7 @@ find [路径] [选项] [操作]
 -nogroup			# 查找无有效属组的文件
 -nouser				# 查找无有效属主的文件
 -newer file1 ! file2	# 查找更改时间比file1新但比file2旧IDE文件
--type					# 按文件类型查找
+-type					# 【按文件类型查找】
 		find . -type f							# 文件
 		find . -type d							# 目录
 		find . -type c							# 字符设备文件
@@ -748,20 +820,17 @@ find [路径] [选项] [操作]
   # 等价
   egrep 'python|PYTHON' file
   
+  cat /etc/passwd | grep "bash"
   ```
 
-cat /etc/passwd | grep "bash"
-  ```
-  
 * `grep`和`egrep`
-
   * `grep`默认不支持扩展正则表达式，只支持基础正则表达式
   * 使用`grep -E`可以支持扩展正则表达式
   * 使用egrep可以支持扩展正则表达式，与`grep -E`等价
 
 ## 5. Sed流编辑器详解
 
-​```shell
+  ```shell
 # sed（Stream Editor），流编辑器，对标准输出或文件逐行进行处理
 # 依据特定的匹配模式，对文本逐行匹配，并对匹配行进行特定处理
 # 第一种形式
@@ -929,6 +998,8 @@ sed -i 's/\(had\)../\1oop/g' str.txt           # hadoop
   #!/bin/bash
   
   FILE_NAME=/dev_env/shell_test/my.cnf
+  # 修改默认空格分隔符 为 换行分隔符
+  IFS=$'\n'
   
   function get_all_segments
   {
@@ -1239,7 +1310,7 @@ awk 'BEGIN{FS=":"}{if($3<50) printf "%-10s%-10s%-5d\n","小于50的UID",$1,$3}' 
 # script.awk
 BEGIN{
         FS=":"
-i}
+}
 {
         if($3<50)
         {

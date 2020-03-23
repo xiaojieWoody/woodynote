@@ -6,10 +6,6 @@ who
 w
 # 切换到root用户
 sudo -i
-# 能够通过ssh连接
-vi /etc/ssh/sshd_config
-将PasswordAuthentication 的属性 no 改为 yes
-service sshd restart
 # 查看ip
 ip a
 # 查看应用所在目录
@@ -24,8 +20,6 @@ netstat -nltp |grep 50070
  telnet 192.168.0.122 50070
 # 查看主机名
 hostname
-# 修改主机名，重启后生效
-vi /etc/hostname
 # 查看端口
 lsof -i tcp:8080
 # 启动main方法
@@ -42,16 +36,29 @@ date -s "10:10:20 2018-02-10"    # 设置时间
 ```shell
 :q!			# 不存盘退出
 :wq			# 存盘退出
-yyp			# 复制
-u				# 撤销
+yyp			# 【复制】
+u				# 【撤销】
 ctrl+R  # 重做更改(恢复之前撤销的内容)
-x				# 删除光标所在字符
-dd			# 删除一行
-A				# 来到一行的末尾
-o				# 光标下一行插入一行
+x				# 【删除光标所在字符】
+dd			# 【删除一行】
+
+w				# 【移动到下一单词的开头】
+b				# 【移动到上一单词的开头】
+
+Ctrl-f  # 【向前滚动一页】
+Ctrl-b  # 【向后滚动一页】
+
+0 			# 【数字零，移到当前行开头】
+A				# 【来到一行的末尾】
+
+o				# 【光标下一行插入一行】
+
 r				# 替换所选中字符
 /name		# 搜索name，按n向下搜索，N向上搜索
-G				# 文章底部
+
+G				# 【文章底部】
+gg      # 【移动到文件开头】
+
 >>      # 右缩进
 <<      # 左缩进
 Ctrl-g  # 显示当前编辑文件名及行数

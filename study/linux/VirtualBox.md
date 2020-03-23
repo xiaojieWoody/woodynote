@@ -2,7 +2,7 @@
 
 * 虚拟机设置网络为桥接模式
 
-## 修改主机名：
+## 修改主机名
 
 * `sudo hostnamectl set-hostname <newhostname>`
 
