@@ -29,6 +29,25 @@ java -cp day01.jar day01.service.multiport.MultiPortServer
 df -h			#查看硬盘大小
 du -sh *  #查看文件大小
 date -s "10:10:20 2018-02-10"    # 设置时间
+
+# linux下利用nohup后台运行jar文件包程序
+# 方式一：所有输出被重定向到nohup.out的文件中
+nohup java -jar XXX.jar &
+# 方式二：输出重定向到out.file文件
+nohup java -jar XXX.jar >temp.txt &
+# 通过jobs命令查看后台运行任务
+jobs
+# 将某个作业调回前台控制，只需要 fg + 编号即可
+fg 23
+
+# rz/sz
+# wget https://www.ohse.de/uwe/releases/lrzsz-0.12.20.tar.gz
+yum install lrzsz
+sz filename (发送文件到客户端,zmodem接收可以自行启动)
+rz (从客户端上传文件到linux服务端)
+
+# 安装vim
+yum -y install vim*
 ```
 
 ## vim
@@ -45,19 +64,22 @@ dd			# 【删除一行】
 w				# 【移动到下一单词的开头】
 b				# 【移动到上一单词的开头】
 
-Ctrl-f  # 【向前滚动一页】
-Ctrl-b  # 【向后滚动一页】
-
 0 			# 【数字零，移到当前行开头】
 A				# 【来到一行的末尾】
 
+G				# 【文章底部】
+gg      # 【移动到文件开头】
+
 o				# 【光标下一行插入一行】
+
+Ctrl-f  # 【向前滚动一页】
+Ctrl-b  # 【向后滚动一页】
+
+:%s/vivian/sky/						#【替换每一行的第一个 vivian 为 sky】
+:%s/vivian/sky/g					#【替换每一行中所有 vivian 为 sky】
 
 r				# 替换所选中字符
 /name		# 搜索name，按n向下搜索，N向上搜索
-
-G				# 【文章底部】
-gg      # 【移动到文件开头】
 
 >>      # 右缩进
 <<      # 左缩进
@@ -170,8 +192,8 @@ man more      # 查看more有哪些功能
 # 不能直接到最后一页，可以使用tail来代替
 
 # less
-ctrl+f							# 向前翻一页
-ctrl+b							# 向后翻一页
+ctrl+f							# 【向前翻一页】
+ctrl+b							# 【向后翻一页】
 G 									# 移动到最后一行
 g 									# 移动到第一行
 /										# 字符串：向下搜索“字符串”的功能
@@ -200,7 +222,7 @@ touch test.txt             # 对文件时间进行更新，或者创建文件
 date                       # 日期
 
 # grep
-grep 'test111' test.txt -n # 查找文件内容并显示在第几行
+grep 'test111' test.txt -n # 【查找文件内容并显示在第几行】
 grep -A 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符后三行
 grep -B 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符前三行
 grep -C 3 'FINISHED' test.txt    # 打印文件中 FINISHED 字符上下三行
@@ -247,12 +269,28 @@ chmod 760 tset1         # 设置权限
 
 ```shell
 # 压缩、打包
+
+# gzip，1）压缩后的格式为：*.gz 2）不能保存原文件，且不能压缩目录
 gzip install.log        # 压缩
-zcat install.log.gz    # 查看
-tar cvf 20180317.tar * # 打包
-tar xvf 20180317.tar   # 解包
-tar zcvf 20180317.tar.gz *   # 打包压缩
-tar zxvf 20180317.tar.gz     # 解压
+gunzip buodo.gz  				# 解压
+zcat install.log.gz     # 查看
+
+# tar
+-z(gzip)      用gzip来压缩/解压缩文件
+-j(bzip2)     用bzip2来压缩/解压缩文件
+-v(verbose)   详细报告tar处理的文件信息
+-c(create)    创建新的档案文件
+-x(extract)   解压缩文件或目录
+-f(file)      使用档案文件或设备，这个选项通常是必选的
+tar -zcvf buodo.tar.gz buodo		# 【压缩】
+tar -zxvf buodo.tar.gz 					# 【解压】
+
+# zip，1）可以压缩目录； 2）可以保留原文件；
+-r(recursive)    递归压缩目录内的所有文件和目录
+zip boduo.zip boduo		# 压缩文件
+unzip boduo.zip				# 解压文件
+zip -r Demo.zip Demo	#【压缩目录】
+unzip Demo.zip				# 解压目录
 ```
 
 ```shell
@@ -321,8 +359,6 @@ chkconfig vsftpd off
 ```
 
 ![image-20200104120925920](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104120925920.png)
-
-
 
 ### 搭建自己的gitlab
 

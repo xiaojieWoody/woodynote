@@ -7,8 +7,6 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
 # 正则表达式
 ```
 
-
-
 # 目标
 
 * 基本监控系统脚本编写（CPU、内存、IO等）
@@ -42,11 +40,11 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   # ${变量名%%匹配规则}
   var5=${var1%%ov*}				# I l
   
-  # 变量内容符合旧字符串，则【第一个】旧字符串会被新字符串取代
+  #【1】 变量内容符合旧字符串，则【第一个】旧字符串会被新字符串取代
   # ${变量名/旧字符串/新字符串}
   var6=${var1/love/LOVE}  # I LOVE you,Do you love me
   
-  # 变量内容符合旧字符串，则【全部的】旧字符串会被新字符串取代
+  #【2】变量内容符合旧字符串，则【全部的】旧字符串会被新字符串取代
   # ${变量名//旧字符串/新字符串}
   var7=${var1//love/LOVE} # I LOVE you,Do you LOVE me
   ```
@@ -259,9 +257,13 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   man date
   #!/bin/bash
   echo "This year have passed $(date +%j) days"
-  echo "This year have passed $(($(date +%j) /7)) week"
-  echo "There is $((365 - $(date +%j))) days before new year"
-  echo "There is $(((365 - $(date +%j))/7)) weeks before new year"
+  # echo "This year have passed $(($(date +%j) /7)) week"
+  # date_test.sh:行5: 365 - 091: 数值太大不可为算数进制的基 （错误符号是 "091"）,需转成10进制
+  echo "This year have passed $((10#$(date +%j) /7)) week"
+  # echo "There is $((365 - $(date +%j))) days before new year"
+  echo "There is $((365 - 10#$(date +%j))) days before new year"
+  # echo "There is $(((365 - $(date +%j))/7)) weeks before new year"
+  echo "There is $(((365-10#$(date +%j))/7)) weeks before new year"
   ```
 
   ```shell
@@ -338,32 +340,30 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
   \<、\<=、\>、\>=、=、!=
   +-*/%
   ```
-```
-  
-​```shell
-  # num1不为空且非0，返回num1；否则返回num2
+```shell
+# num1不为空且非0，返回num1；否则返回num2
 num1 | num2
-  # num1不为空且非0，返回num1；否则返回0
-  num1 & num2
-  # num1小于num2，返回1；否则返回0
-  num1 < num2
-  echo `expr $num1 \< $num2`
+# num1不为空且非0，返回num1；否则返回0
+num1 & num2
+# num1小于num2，返回1；否则返回0
+num1 < num2
+echo `expr $num1 \< $num2`
 # num1小于等于num2，返回1；否则返回0
-  num1 <= num2
-  # num1等于num2，返回1；否则返回0
-  num1 = num2
-  # num1不等于num2，返回1；否则返回0
-  num1 != num2
-  # num1大于num2，返回1；否则返回0
-  num1 > num2
-  # num1大于等于num2，返回1；否则返回0
-  num1 >= num2
+num1 <= num2
+# num1等于num2，返回1；否则返回0
+num1 = num2
+# num1不等于num2，返回1；否则返回0
+num1 != num2
+# num1大于num2，返回1；否则返回0
+num1 > num2
+# num1大于等于num2，返回1；否则返回0
+num1 >= num2
 ```
 
   ```shell
-  num3=`expr $num1 + $num2`
-  num3=$(($num1+$num2))
-  echo $num3
+num3=`expr $num1 + $num2`
+num3=$(($num1+$num2))
+echo $num3
   ```
 
   ```shell
@@ -426,14 +426,11 @@ num1 | num2
   * ```shell
     # bc_test.sh
     #!/bin/bash
-    #
+    # bc是bash内建的运算器，支持浮点数运算,内建变量scale可以设置，默认为0
     read -p "num1:" num1
     read -p "num2:" num2
-    
     # echo "scale=4;$num1 / $num2" | bc
-    
     num3=`echo "scale=4;$num1 / $num2" | bc`
-    
     echo "$num1 / $num2 = $num3"
     ```
 
@@ -471,6 +468,7 @@ function name
 #!/bin/bash
 this_pid=$$
 while true
+do
 # 过滤掉子进程
 ps -ef | grep nginx | grep -v grep | grep -v $this_pid &> /dev/null
 if [ $? -eq 0 ];then
@@ -2089,6 +2087,7 @@ mysqldump -udbuser -p123456 school score > score.sql
   }
   
   # top
+  # ps aux | awk -v pid=1488 '$2==pid{print $0}'
   # get_process_info_by_pid 80111
   # echo "$pro_status $pro_cpu $pro_mem $pro_start_time"
   
@@ -2205,10 +2204,13 @@ mysqldump -udbuser -p123456 school score > score.sql
   	done
   fi
   ```
-
+```shell
+  
   
 
 
 
 
 
+
+```

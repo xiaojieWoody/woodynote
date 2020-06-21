@@ -20,6 +20,13 @@ vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
 # 保存后，重启网络
 service network restart
 # 网络改成 桥接模式
+
+# woody角色使用sudo
+su root
+chmod 740 /etc/sudoers
+vi /etc/sudoers
+# 添加
+woody   ALL=(ALL)       ALL
 ```
 
 ## ssh连接
@@ -58,8 +65,63 @@ export PATH=$PATH:$JAVA_HOME/bin
 
 ## mysql
 
+https://www.jianshu.com/p/1dab9a4d0d5f
+
 ```shell
 # https://downloads.mysql.com/archives/community/
+# 在 https://dev.mysql.com/downloads/repo/yum/ 找到 yum 源 rpm 安装包
+# 下载
+shell> wget https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+# 安装 mysql 源
+shell> yum localinstall mysql57-community-release-el7-11.noarch.rpm
+# 用下面的命令检查 mysql 源是否安装成功
+shell> yum repolist enabled | grep "mysql.*-community.*"
+
+# 使用 yum install 命令安装
+shell> yum install -y mysql-community-server
+# 在 CentOS 7 下，新的启动/关闭服务的命令是 systemctl start|stop
+shell> systemctl start mysqld
+shell> systemctl status mysqld
+# 开机启动
+shell> systemctl enable mysqld
+# 重载所有修改过的配置文件
+shell> systemctl daemon-reload
+# mysql 安装完成之后，生成的默认密码在 /var/log/mysqld.log 文件中。使用 grep 命令找到日志中的密码
+shell> grep 'temporary password' /var/log/mysqld.log
+# 首次通过初始密码登录后，使用以下命令修改密码
+shell> mysql -uroot -p
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'MyNewPass4!'; 
+mysql> flush privileges;
+
+set password for 'root'@'localhost'=password('IamMySQL0108!');
+GRANT ALL PRIVILEGES ON *.* TO 'woody'@'%' IDENTIFIED BY 'IamWoody0108!' WITH GRANT OPT
+ION;
+
+# 添加一个允许远程连接的帐户
+mysql> GRANT ALL PRIVILEGES ON *.* TO 'zhangsan'@'%' IDENTIFIED BY 'Zhangsan2018!' WITH GRANT OPTION;
+# 设置默认编码为 utf8
+# 修改 /etc/my.cnf 配置文件，在相关节点（没有则自行添加）下添加编码配置
+[mysqld]
+character-set-server=utf8
+[client]
+default-character-set=utf8
+[mysql]
+default-character-set=utf8
+# 重启mysql服务，查询编码
+shell> systemctl restart mysqld
+shell> mysql -uroot -p
+mysql> show variables like 'character%';
+# 默认配置文件路径：
+配置文件：/etc/my.cnf
+日志文件：/var/log/mysqld.log
+服务启动脚本：/usr/lib/systemd/system/mysqld.service
+socket文件：/var/run/mysqld/mysqld.pid
+```
+
+
+
+```shell
+
 # 先检查系统是否装有mysql
 rpm -qa | grep mysql
 # 删除可用
@@ -145,6 +207,16 @@ sudo yum-config-manager \
     https://download.docker.com/linux/centos/docker-ce.repo
     
 sudo yum install docker-ce docker-ce-cli containerd.io 
+```
+
+## docker-compose
+
+```
+sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+docker-compose --version
 ```
 
 ## 免密登录
