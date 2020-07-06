@@ -62,7 +62,7 @@
       * `pip list`
       * 查看依赖关系，`pipenv graph`
 
-    * 目录下，`pipenv install flask`
+    * 目录下，`pipenv install flask -i https://pypi.tuna.tsinghua.edu.cn/simple`
 
     * `flask`
 
@@ -159,16 +159,31 @@
     * int(False) = 0
     * bool(1) = True
     * bool(-1.1)=True
-    * bool(0) = False，
-    * bool(0)=False
+    * bool(0) = False
     * bool('')=False
     * bool([])=False
     * bool({})=False
     * bool(None)=False
-
+    
   * complex复数
 
     * 36j
+    
+    * 是由一个实数和一个虚数组合构成，表示为：**x+yj**
+    
+    * 一个复数时一对有序浮点数 (x,y)，其中 x 是实数部分，y 是虚数部分
+    
+      ```python
+      1、虚数不能单独存在，它们总是和一个值为 0.0 的实数部分一起构成一个复数
+      2、复数由实数部分和虚数部分构成
+      3、表示虚数的语法：real+imagej
+      4、实数部分和虚数部分都是浮点数
+      5、虚数部分必须有后缀j或J
+      #coding=utf8
+      aa=123-12j
+      print aa.real  # output 实数部分 123.0  
+      print aa.imag  # output虚数部分 -12.0
+      ```
 
 * 字符串str
 
@@ -522,7 +537,7 @@ is、==、isinstance
           continue
       print(a)     
   # break结束当前循环，如果在嵌套循环里，则结束内部循环，外部循环不受影响
-  # continue终止这次执行，下次循环继续执行
+  # continue结束这次执行，下次循环继续执行
   
   # 包左不包右
   for x in range(0,10) :
@@ -916,8 +931,6 @@ student.print_file()
 
 # 正则表达式与JSON
 
-![image-20200617144246492](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200617144246492.png)
-
 * 正则表达式
 
   * 是一个特殊的字符序列，一个字符串是否与我们所设定的这样的字符序列，相匹配
@@ -948,7 +961,7 @@ student.print_file()
   a = 'C0C++JAVA8C#9Python6Javascript'
   s = 'anc, acc, adc, aec, afc, ahc'
   
-  r1 = re.findall('a[cf]c', s)     # c或f，['acc', 'afc']
+  r1 = re.findall('a[cf]c', s)     # c或f(一个)，['acc', 'afc']
   r2 = re.findall('a[^cf]c', s)     # 非c非f，['anc', 'adc', 'aec', 'ahc']
   r3 = re.findall('a[c-f]c', s)    # c-f，['acc', 'adc', 'aec', 'afc']
   
@@ -1116,13 +1129,13 @@ student.print_file()
       BLACK = 3
       RED = 4
   
-  print(VIP.YELLOW.name) 
-  print(VIP.YELLOW.value)  
-  print(VIP['YELLOW'])
+  print(VIP.YELLOW.name)     # YELLOW
+  print(VIP.YELLOW.value)    # 1
+  print(VIP['YELLOW'])       # VIP.YELLOW
   
-  print(type(VIP.YELLOW.name)) 
-  print(type(VIP.YELLOW))
-  print(type(VIP['YELLOW']))
+  print(type(VIP.YELLOW.name))  # <class 'str'>
+  print(type(VIP.YELLOW))       # <enum 'VIP'>
+  print(type(VIP['YELLOW']))    # <enum 'VIP'>
   
   # 别名不被遍历
   for v in VIP:
@@ -1200,9 +1213,9 @@ student.print_file()
       return f2
   
   f = f1()
-  print(f)
-  print(f.__closure__)
-  print(f.__closure__[0].cell_contents)
+  print(f)                 # <function f1.<locals>.f2 at 0x10359e700>
+  print(f.__closure__)     # (<cell at 0x10356d190: int object at 0x10326ebb0>,)
+  print(f.__closure__[0].cell_contents)   # 10
   ```
 
   ```python

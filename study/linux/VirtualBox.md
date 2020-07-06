@@ -233,3 +233,55 @@ ssh-copy-id george@slave2
 ssh slave2  # slave1上
 ```
 
+# Ubuntu18.04 虚拟机
+
+* vi命令的编辑模式下不能正常使用方向键和退格键的问题
+
+  ```shell
+  # 卸载vim-tiny
+  sudo apt-get remove vim-common
+  # 安装vim-full
+  sudo apt-get install vim
+  ```
+
+* vi 没有那个文件或目录
+
+  ```shell
+  sudo -i
+  apt-get update
+  apt-get install vim
+  ```
+
+* 关闭防火墙
+
+  ```shell
+  ufw disable
+  ```
+
+* 配置ssh
+
+  ```shell
+  # 安装OpenSSH服务：
+  sudo apt-get install openssh-server
+  # 检查一下服务的状态
+  sudo service ssh status
+  ```
+
+* 切换root
+
+  ```shell
+  sudo -i
+  ```
+
+## 配置静态IP
+
+https://blog.csdn.net/davidhzq/article/details/102991577
+
+```shell
+# 界面上设置
+IPv4
+手动
+地址 192.168.0.229  255.255.255.0  192.168.0.1
+DNS	 8.8.8.8，8.8.4.4
+```
+
