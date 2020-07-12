@@ -1,9 +1,9 @@
-# Tensorflow keras实战
+# 2.Tensorflow keras实战
 
 ## keras是什么
 
 * 基于python的高级神经网络API
-* 以Tensorflow、CNTK或者Theano为后端运行，，keras必须有后端才可以运行
+* 以Tensorflow、CNTK或者Theano为后端运行，keras必须有后端才可以运行
   * 后端可以切换，现在多用tensorflow
 * 极方便于快速实验，帮助用户以最少的时间验证自己的想法
 
@@ -308,18 +308,151 @@
 
 * Keras搭建回归模型
 
-# Tensorflow基础API使用
+# 3. Tensorflow基础API使用
 
-# Tensorflow dataset使用
+## tf基础API引入
 
-# Tensorflow Estimator使用与tf1.0
+![image-20200707132317589](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707132317589.png)
 
-# 卷积神经网络
+![image-20200707132442361](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707132442361.png)
 
-# 循环神经网络
+![image-20200707132521586](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707132521586.png)
 
-# Tensorflow分布式
+![image-20200707132854701](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707132854701.png)
 
-# Tensorflow模型保存与部署
+## 实战tf.constant
 
-# 机器翻译
+![image-20200707133338289](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133338289.png)
+
+![image-20200707133357930](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133357930.png)
+
+![image-20200707133452456](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133452456.png)
+
+![image-20200707133555223](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133555223.png)
+
+![image-20200707133651737](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133651737.png)
+
+![image-20200707133746248](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133746248.png)
+
+## 实战tf.strings与ragged tensor
+
+![image-20200707133840883](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707133840883.png)
+
+![image-20200707134007946](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134007946.png)
+
+![image-20200707134101278](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134101278.png)
+
+![image-20200707134246020](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134246020.png)
+
+## 实战sparse tensor与tf.Variable
+
+![image-20200707134439735](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134439735.png)
+
+![image-20200707134555251](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134555251.png)
+
+![image-20200707134632460](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134632460.png)
+
+![image-20200707134825282](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134825282.png)
+
+![image-20200707134935273](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707134935273.png)
+
+![image-20200707135044996](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135044996.png)
+
+![image-20200707135134486](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135134486.png)
+
+## 实战自定义损失函数与DenseLayer回顾
+
+![image-20200707135348776](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135348776.png)
+
+![image-20200707135620766](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135620766.png)
+
+![image-20200707135732130](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135732130.png)
+
+![image-20200707135754988](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707135754988.png)
+
+## 使子类与lambda分别实战自定义层次
+
+![image-20200707140153525](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707140153525.png)
+
+![image-20200707140310697](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707140310697.png)
+
+![image-20200707140632946](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707140632946.png)
+
+![image-20200707140605299](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707140605299.png)
+
+## tf.function函数转换
+
+* tf.function：把python函数或代码块转化成tensorflow中的图
+
+* autograph：tf.function所依赖的一种机制（转化）
+
+* 优势：速度快
+
+  ![image-20200707141442091](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707141442091.png)
+
+  ![image-20200707141556348](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707141556348.png)
+
+## @tf.function函数转换
+
+![image-20200707141843977](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707141843977.png)
+
+![image-20200707142101768](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707142101768.png)
+
+![image-20200707142407418](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707142407418.png)
+
+![image-20200707142426292](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707142426292.png)
+
+##  函数签名与图结构
+
+![image-20200707142619095](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707142619095.png)
+
+![image-20200707142919578](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707142919578.png)
+
+![image-20200707143135126](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143135126.png)
+
+![image-20200707143221795](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143221795.png)
+
+![image-20200707143335272](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143335272.png)
+
+![image-20200707143415635](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143415635.png)
+
+##  近似求导
+
+![image-20200707143808748](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143808748.png)
+
+![image-20200707143926480](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707143926480.png)
+
+## tf.GradientTape基本使用方法
+
+* 求导
+
+![image-20200707144112355](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144112355.png)
+
+![image-20200707144219827](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144219827.png)
+
+![image-20200707144322273](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144322273.png)
+
+![image-20200707144401950](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144401950.png)
+
+![image-20200707144432067](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144432067.png)
+
+![image-20200707144536960](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144536960.png)
+
+![image-20200707144715248](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707144715248.png)
+
+![image-20200707145432540](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707145432540.png)
+
+![image-20200707145520337](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707145520337.png)
+
+## tf.GradientTape与tf.keras结合使用
+
+![image-20200707145829668](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707145829668.png)
+
+![image-20200707150020992](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707150020992.png)
+
+![image-20200707150348482](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200707150348482.png)
+
+
+
+
+

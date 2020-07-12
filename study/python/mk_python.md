@@ -95,6 +95,60 @@
 
 * `if __name__ == '__main__'`的意思是：当.py文件被直接运行时，`if __name__ == '__main__'`之下的代码块将被运行；当.py文件以模块形式被导入时，`if __name__ == '__main__'`之下的代码块不被运行
 
+* with
+
+  * with 语句适用于对资源进行访问的场合，确保不管使用过程中是否发生异常都会执行必要的“清理”操作，释放资源，比如文件使用后自动关闭／线程中锁的自动获取和释放等
+
+    ```python
+    with open("１.txt") as file:
+        data = file.read()
+    ```
+
+  * 工作原理
+
+    * 紧跟with后面的语句被求值后，返回对象的“–enter–()”方法被调用，这个方法的返回值将被赋值给as后面的变量
+
+    * 当with后面的代码块全部被执行完之后，将调用前面返回对象的“–exit–()”方法
+
+      ```python
+      class Sample:
+          def __enter__(self):
+              print "in __enter__"
+              return "Foo"
+          def __exit__(self, exc_type, exc_val, exc_tb):
+              print "in __exit__"
+      def get_sample():
+          return Sample()
+      with get_sample() as sample:
+          print "Sample: ", sample
+      
+      # in __enter__
+      # Sample:  Foo
+      # in __exit__    
+      ```
+
+      * 可以看到，整个运行过程如下：
+
+        （１）**enter**()方法被执行；
+        （２）**enter**()方法的返回值，在这个例子中是”Foo”，赋值给变量sample；
+        （３）执行代码块，打印sample变量的值为”Foo”；
+        （４）**exit**()方法被调用；
+
+      * 【注：】**exit**()方法中有３个参数， exc_type, exc_val, exc_tb，这些参数在异常处理中相当有用。
+        exc_type：　错误的类型
+        exc_val：　错误类型对应的值
+        exc_tb：　代码中错误发生的位置
+
+    * 实际上，在with后面的代码块抛出异常时，**exit**()方法被执行。开发库时，清理资源，关闭文件等操作，都可以放在**exit**()方法中。
+
+    * 总之，with-as表达式极大的简化了每次写finally的工作，这对代码的优雅性是有极大帮助的。
+      如果有多项，可以这样写：
+
+      ```python
+      With open('1.txt') as f1, open('2.txt') as  f2:
+          do something
+      ```
+
 # Python基本类型
 
 * 什么是代码
@@ -589,7 +643,6 @@ c)
 
 # 导入包时，自动执行__init__
 
-
 # __init__.py   t包中
 __all__ = ['c7']       # 内容
 
@@ -714,8 +767,8 @@ def default_fun_parm(name, gender='男', age=18):
 default_fun_parm('zs')
 # 可变参数
 def demo(*param):
-  print(param)
-  print(type(param))
+  print(param)                     # (1,2,3,4,5,6)
+  print(type(param))               # <class 'tuple'>
 demo(1,2,3,4,5)  
 
 a = (1,2,3,4,5,6)
@@ -975,7 +1028,7 @@ student.print_file()
   
   print(r7)
   
-  r = re.findall('\d', a)         # ['0', '8', '9', '6']
+  r = re.findall('\d', a)         # ['0', '8', '9', '6'] 数字是拆开的
   rr = re.findall('\D', a)        # 非数字  
   ```
 
@@ -1234,12 +1287,31 @@ student.print_file()
   ```
 
   ```python
+  count = 1
+  
+  def a():
+      count = 'a函数里面'  　　#如果不事先声明，那么函数b中的nonlocal就会报错
+      def b():
+        # nonlocal只能在封装函数中使用，在外部函数先进行声明，在内部函数进行nonlocal声明，这样在b()函数中的count与a()中的count是同一个变量
+          nonlocal count
+          print(count)
+          count = 2
+      b()
+      print(count)
+  
+  if __name__ == '__main__':
+      a()          # a函数里面 2
+      print(count) # 1
+  ```
+  
+  ```python
   # 闭包
   origin = 0
   
   def factory(pos):
       def go(step):
-          nonlocal pos
+          # nonlocal只能在封装函数中使用，在外部函数先进行声明，在内部函数进行nonlocal声明，这样在go()函数中的pos与factory()中的pos是同一个变量
+          nonlocal pos            
           new_pos = pos + step
           pos = new_pos
           return new_pos
@@ -1249,13 +1321,13 @@ student.print_file()
   
   print(tourist(2))        # 2
   print(origin)            # 0
-  print(tourist.__closure__[0].cell_contents)
+  print(tourist.__closure__[0].cell_contents)   # 2
   print(tourist(3))        # 5
   print(origin)						 # 0
-  print(tourist.__closure__[0].cell_contents)
+  print(tourist.__closure__[0].cell_contents)   # 5
   print(tourist(5))        # 10
   print(origin)						 # 0
-  print(tourist.__closure__[0].cell_contents)
+  print(tourist.__closure__[0].cell_contents)   # 10
   ```
 
 # 函数、高阶函数、装饰器
@@ -1351,7 +1423,7 @@ student.print_file()
       print('This is a function')
   
   f = decorator(f1)
-  f()
+  f()          # 1594282980.5679739 This is a function
   ```
 
   ```python
@@ -1368,7 +1440,7 @@ student.print_file()
   def f1():
       print('This is a function')
   
-  f1()
+  f1()       # 1594282980.5679739 This is a function
   ```
 
   ```python 
@@ -1384,7 +1456,7 @@ student.print_file()
   def f1(func_name):
       print('This is a function:' + func_name)
   
-  f1('test func')
+  f1('test func')     # 1594283079.4218822   This is a function test func
   ```
 
   ```python 
@@ -1429,11 +1501,11 @@ student.print_file()
   @decorator
   def f3(func_name1, func_name2, **kw):
       print('This is function: ' + func_name1 + ' : '  +  func_name2)
-      print(kw)
+      print(kw)                # {'a': 1, 'b': 2, 'c': '123'}
   
   f1('test func')
   f2('test func1', 'test func2')
-  f3('test func1', 'test func2', a = 1, b = 2, c = '123')
+  f3('test func1', 'test func2', a = 1, b = 2, c = '123') 
   ```
 
 # 实战：原生爬虫
@@ -1739,7 +1811,7 @@ spider.go()
           This is f1
       '''
       print(f1.__name__)   
-  f1()            
+  f1()            # f1
   ```
 
 * 海象运算符

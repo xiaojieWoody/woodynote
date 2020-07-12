@@ -1,10 +1,21 @@
 # 数据结构与算法相关问题与解决技巧
 
-## 2-1 如何在列表, 字典, 集合中根据条件筛选数据
+## 如何在列表, 字典, 集合中根据条件筛选数据
 
-![image-20200705152028762](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705152028762.png)
-
-![image-20200705152117101](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705152117101.png)
+```shell
+# 实际案例
+过滤掉列表[3,9,-1,10,20,-2...]中的负数
+筛选出字典{'LiLei':79, 'Jim':88, 'Lucy':92...}中值高于90的项
+筛选出集合{77, 89, 32, 20...}中能被3整除的元素
+# 解决方案
+列表：
+	列表解析:[x for x in data if x >= 0]
+	filter函数:filter(lambda x:x>=0, data)
+字典：
+	字典解析:{k:v for k,v in d.items() if v > 90}
+集合：
+	集合解析:{x for x in s if x % 3 == 0}
+```
 
 ```python
 from random import randint
@@ -35,11 +46,20 @@ s_r = {x for x in s if x % 3 == 0}
 print(s_r)
 ```
 
-## 2-2 如何为元组中的每个元素命名, 提高程序可读性
+## 如何为元组中的每个元素命名, 提高程序可读性
 
-![image-20200705154455250](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705154455250.png)
-
-![image-20200705154559115](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705154559115.png)
+```shell
+# 学生信息系统中数据为固定格式:(名字，年龄，性别，邮箱)
+('Jim', 16, 'male', 'jim8721@gmail.com')
+('LiLei', 17, 'male', 'leile@qq.com')
+('Lucy', 16, 'female', 'lucy123@yahoo.com')
+# 访问时，使用索引（index）访问，大量索引降低程序可读性
+# 解决方案
+方案1:
+	定义一系列数值常量或枚举类型
+方案2:
+	使用标准库中collecitions.namedtuple替代内置tuple
+```
 
 ```python
 # 定义数值常量
@@ -72,11 +92,24 @@ print(s2[0])      # Jim
 print(s2.name)    # Jim
 ```
 
-## 2-3 如何根据字典中值的大小, 对字典中的项排序
+## 如何根据字典中值的大小, 对字典中的项排序
 
-![image-20200705155748375](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705155748375.png)
-
-![image-20200705160610061](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705160610061.png)
+```shell
+# 某班英语成绩以字典形式存储为：
+{
+	'LiLei':79,
+	'Jim': 88,
+	'Lucy':92,
+	...
+}
+# 如何根据成绩高低，计算学生排名
+# 解决方案
+将字典中的各项转换为元组，使用内置函数sorted排序
+方案1:
+	将字典中的项转化为（值，键）元组。（列表解析或zip）
+方案2:
+	传递sorted函数的key参数
+```
 
 ```python
 print((3, 2) > (2, 1))   # True
@@ -84,13 +117,16 @@ print((3, 2) > (3, 4))   # False
 
 from random import randint
 d = {k: randint(60, 100) for k in 'abcdefgh'}
+# {'a': 82, 'b': 95, 'c': 74, 'd': 94, 'e': 86, 'f': 62, 'g': 64}
 print(d)
 l = [(v, k) for k, v in d.items()]
+# [(82, 'a'), (95, 'b'), (74, 'c'), (94, 'd'), (86, 'e'), (62, 'f'), (64, 'g')]
 print(l)
+# [(62, 'f'), (64, 'g'), (74, 'c'), (82, 'a'), (86, 'e'), (94, 'd'), (95, 'b')]
 print(sorted(l))
 print(sorted(l, reverse=True))
 
-t = list(zip([1,2,3], [4,5,6]))
+t = list(zip([1,2,3], [4,5,6]))            # [(1, 4), (2, 5), (3, 6)]
 ll = list(zip(d.values(), d.keys()))
 print(ll)
 
@@ -114,11 +150,17 @@ dd = {k:(i,v) for i, (k, v ) in enumerate(lt, 1)}
 print(dd)   # {'b': (1, 95), 'd': (2, 92), 'f': (3, 90), 'a': (4, 82), 'g': (5, 78), 'h': (6, 76), 'e': (7, 74), 'c': (8, 68)}
 ```
 
-## 2-4 如何统计序列中元素的频度
+## 如何统计序列中元素的频度
 
-![image-20200705161631189](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705161631189.png)
-
-![image-20200705182453196](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705182453196.png)
+```shell
+1. 某随机序列[12,5,6,4,6,5,5,7]中，找到出现次数最高的3个元素，它们出现次数是多少？
+2. 对某英文文章的单词，进行词频统计，找到出现次数最高的10个单词，他们出现次数是多少？
+# 解决方案
+方案1:
+	将序列转换为字典{元素:频度}，根据字典中的值排序
+方案2:
+	使用标准库collections中的Counter对象
+```
 
 ```python
 from random import randint
@@ -159,11 +201,21 @@ c2 = Counter(word_list)
 res = c2.most_common(10)
 ```
 
-## 2-5 如何快速找到多个字典中的公共键(key)
+## 如何快速找到多个字典中的公共键(key)
 
-![image-20200705182927731](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705182927731.png)
-
-![image-20200705183900295](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705183900295.png)
+```shell
+西班牙足球甲级联赛，每轮球员进球统计：
+第1轮：{'苏亚雷斯':1, '梅西':2, '本泽马':1,...}
+第2轮：{'苏亚雷斯':2, 'C罗':1, '格里兹曼':2,...}
+第3轮：{'苏亚雷斯':1, '托雷斯':1, '贝尔':1,...}
+...
+统计出前N轮，每场比赛都有进球的球员
+# 解决方案
+利用集合(set)的交集操作
+Step1:使用字典的keys()方法，得到一个字典keys的集合
+Step2:使用map函数，得到每个字典keys的集合
+Step3:使用reduce函数，取所有字典的keys集合的交集
+```
 
 ```python
 from random import randint, sample
@@ -206,11 +258,16 @@ dr = reduce(lambda a, b: a & b, map(dict.keys, d1))
 print(dr)        # {'h', 'b', 'a'}
 ```
 
-## 2-6 如何让字典保持有序
+## 如何让字典保持有序
 
-![image-20200705185020916](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705185020916.png)
-
-![image-20200705185142963](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705185142963.png)
+```shell
+某编程竞赛系统，对参赛选手编程解题进行计时，选手完成题目后，把该选手解题用时记录到字典中，以便赛后按选手名查询成绩
+{'LiLei':(2,43), 'HanMeimei':(5,52), 'Jim':(1, 39)...}
+比赛结束后，需按排名顺序依次打印选手成绩，如何实现？
+# 解决方案
+使用标准库collections中的OrderedDict
+以OrderedDict替代内置字典Dict，依次将选手成绩存入OrderedDict
+```
 
 ```python
 from collections import OrderedDict
@@ -251,11 +308,19 @@ print(query_by_order(od, 4)) # ['g']
 print(query_by_order(od, 3, 6))  # ['h', 'g', 'e', 'a']
 ```
 
-## 2-7 如何实现用户的历史记录功能(最多n条)
+## 如何实现用户的历史记录功能(最多n条)
 
-![image-20200705190248918](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705190248918.png)
-
-![image-20200705192305973](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705192305973.png)
+```shell
+很多应用程序都有浏览用户的历史记录的功能，例如
+1. 浏览器可以查看最近访问过的网页
+2. 视频播放器可以查看最近播放过的视频文件
+3. Shell可以查看用户输入过的命令
+现在制作一个简单的猜数字的小游戏，如何添加历史记录功能，显示用户最近猜过的数字？
+# 解决方案
+使用容量为n的队列存储历史记录
+使用标准库collections中的deque，它是一个双端循环队列
+使用pickle模块将历史记录存储到硬盘，以便下次启动使用
+```
 
 ```python
 from random import randint
@@ -315,9 +380,14 @@ pickle.load(open('save.pkl', 'rb'))
 
 ## 如何拆分含有多种分隔符的字符串
 
-![image-20200705200505962](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705200505962.png)
-
-![image-20200705201732358](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705201732358.png)
+```shell
+要把某个字符串依据分隔符号拆分不同的字段，该字符串包含多种不同的分隔符，例如：
+s = 'ab;cd|efg|hi,jkl|mn\topq;rst,uvw\txyz'
+其中<,>,<;>,</>,<\t>都是分隔符号，如何处理？
+# 解决方案
+方法1:连续使用是str.split()方法，每次处理一种分隔符号
+方法2:使用正则表达式的re.split()方法(推荐)
+```
 
 ```python
 s = 'ab;cd|efg|hi,jkl|mn\topq;rst,uvw\txyz'
@@ -351,9 +421,19 @@ print(result4)
 
 ## 如何判断字符串a是否以字符串b开头或结尾
 
-![image-20200705201903171](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705201903171.png)
-
-![image-20200705202809458](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705202809458.png)
+```python
+某文件系统目录下有一系列文件：
+	quicksort.c
+	graph.py
+  heap.java
+  install.sh
+  stack.cpp
+  ...
+编写程序给其中所有.sh文件和.py文件加上用户可执行权限  
+# 解决方案
+使用str.startswith()和str.endswith()方法
+(注意：多个匹配时参数使用元组)
+```
 
 ```python
 fn = 'aaa.py'
@@ -381,11 +461,18 @@ for fn in os.listdir():
 
 ## 如何调整字符串中文本的格式
 
-![image-20200705202849738](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705202849738.png)
-
-![image-20200705202930737](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705202930737.png)
-
-![image-20200705203007400](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705203007400.png)
+```shell
+某软件的log文件，其中的日期格式为'yyyy-mm-dd':
+	2016-05-21 10:39:26 status unpacked python3-pip:all
+	2016-05-23 10:49:26 status half-configured python3
+	2016-05-23 10:52:26 status installed python3-pip:all
+	2016-05-24 11:57:26 configure python3-wheel:all 0.24
+	...
+想把其中日期改为美国日期格式'mm/dd/yyyy'
+'2016-05-23' => '05/23/2016',应如何处理？
+# 解决方案
+使用正则表达式re.sub()方法做字符串替换，利用正则表达式的捕获组，捕获每个部分内容，在替换字符串中调整各个捕获组的顺序
+```
 
 ![image-20200705203342424](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705203342424.png)
 
@@ -403,9 +490,23 @@ print(re.sub(r'(?P<d>\d{4})-(?P<m>\d{2})-(?P<y>\d{2})', r'\g<m>/\g<d>/\g<y>', lo
 
 ## 如何将多个小字符串拼接成一个大的字符串
 
-![image-20200705203921391](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705203921391.png)
-
-![image-20200705204948646](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705204948646.png)
+```python
+在设计某网络程序时，我们自定义了一个基于UDP的网络协议，按照固定次序向服务器传递一系列参数：
+hwDetect:			"<0112>"
+gxDepthBits:	"<32>"
+gxResolution:	"<1024x768>"
+gxRefresh:		"<60>"
+fullAlpha:		"<1>"
+lodDist:			"<100.0>"  
+DistCull:			"<500.0>"
+在程序中我们将各个参数按次序收集到列表中：
+["<0112>","<32>","<1024x768>","<60>","<1>","<100.0>","<500.9>"]
+最终我们要把各个参数拼接成一个数据报进行发送
+"<0112><32><1024x768><60><1><100.0><500.0>"
+# 解决方案
+方法一：迭代列表，连续使用'+'操作依次拼接每一个字符串
+方法二：使用str.join()方法，更加快速的拼接列表中所有字符串
+```
 
 ```python
 l = ["<0112>", "<32>", "<1024x768>", "<60>", "<1>", "<100.0>", "500.0"]
@@ -430,9 +531,25 @@ timeit reduct(str.__add__, l)
 
 ## 如何对字符串进行左, 右, 居中对齐
 
-![image-20200705205423052](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705205423052.png)
-
-![image-20200705205454002](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705205454002.png)
+```python
+某个字典存储了一系列属性值
+{
+  "lodDist":100.0,
+  "SmallCull":0.04,
+  "DistCull":500.0,
+  "trilinear":40,
+  "farclip":477
+}
+在程序中，想以工整的格式将其内容输出，如何处理？
+"lodDist"		:100.0,
+"SmallCull"	:0.04,
+"DistCull"	:500.0,
+"trilinear"	:40,
+"farclip"		:477
+# 解决方案
+方法一：使用字符串的str.ljust(), str.rjust(), str.center()进行左、右、居中对齐
+方法二：使用format()方法，传递类似'<20','>20','^20'参数完成同样任务
+```
 
 ```python
 s = 'abc'
@@ -471,9 +588,20 @@ farclip   : 477
 
 ## 如何去掉字符串中不需要的字符
 
-![image-20200705210625306](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705210625306.png)
+```python
+1. 过滤掉用户输入中前后多余的空白字符：
+'  nick2008@gmail.com  '
+2. 过滤某windows下编辑文本中的'\r':
+  'hello world\r\n'
+3. 去掉文本中的unicode组合符号(音调):
+  'ni hao, chi fan'
 
-![image-20200705211507250](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705211507250.png)
+# 解决方案
+方法一：字符串strip(),lstrip(),rstrip()方法去掉字符串两端字符
+方法二：删除单个固定位置的字符，可以使用切片 + 拼接的方式
+方法三：字符串的replace()方法或正则表达式re.sub()删除任意子串
+方法四：字符串的translate()方法，可以同时删除多种不同字符
+```
 
 ![image-20200705212115700](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200705212115700.png)
 
@@ -802,71 +930,268 @@ offset, size = find_subchunk(f, b'data')
 
 ## 如何设置文件的缓冲
 
-# 5.3
+![image-20200706195651686](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706195651686.png)
+
+![image-20200706195817287](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706195817287.png)
+
+![image-20200706200514292](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200514292.png)
+
+![image-20200706200535070](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200535070.png)
+
+![image-20200706200644692](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200644692.png)
+
+![image-20200706200727787](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200727787.png)
+
+![image-20200706200850814](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200850814.png)
+
+![image-20200706200911492](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200911492.png)
+
+![image-20200706200959522](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706200959522.png)
+
+![image-20200706201019494](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201019494.png)
+
+![image-20200706201109550](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201109550.png)
+
+![image-20200706201156376](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201156376.png)
+
+![image-20200706201238000](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201238000.png)
+
+![image-20200706201254371](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201254371.png)
+
+![image-20200706201333752](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201333752.png)
 
 ## 如何将文件映射到内存
 
+![image-20200706201350767](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201350767.png)
+
+![image-20200706201438785](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201438785.png)
+
+![image-20200706201553850](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706201553850.png)
+
+![image-20200706202157359](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706202157359.png)
+
 ## 如何访问文件的状态
 
+![image-20200706202250909](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706202250909.png)
+
+![image-20200706203248892](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706203248892.png)
+
+![image-20200706203704752](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706203704752.png)
+
+![image-20200706203834029](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706203834029.png)
+
+![image-20200706203918258](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706203918258.png)
+
+![image-20200706203933414](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706203933414.png)
+
+![image-20200706204020244](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706204020244.png)
+
+```python
+import os
+os.stat('a.txt')
+fd = os.open('b.py', os.O_RDONLY)   #文件描述符，给系统调用
+fd # 23
+os.read(fd, 10)  
+```
+
 ## 如何使用临时文件
+
+![image-20200706212501057](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706212501057.png)
+
+![image-20200706212529713](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706212529713.png)
+
+```python
+from tempfile import TemporaryFile, NamedTemporaryFile
+
+tf = TemporaryFile()     # 可以指定目录
+tf.write(b'*' * 1024)
+tf.write(b'*' * 1024)
+tf.write(b'*' * 1024)
+tf.write(b'*' * 1024)
+
+tf.seek(0)
+print(tf.read(512))
+tf.close()               # 删除临时文件
+
+ntf = NamedTemporaryFile()
+print(ntf.name)
+ntf.close()
+import tempfile
+print(tempfile.gettempdir())
+print(tempfile.gettempprefix())     # tmp 
+
+
+import os
+# os.open?
+```
 
 # 数据解析与构建相关问题与解决技巧
 
 ## 如何读写csv数据
 
+![image-20200706213649438](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706213649438.png)
+
+ ![image-20200706213721265](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706213721265.png)
+
+![image-20200706214039417](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706214039417.png)
+
+![image-20200706214113201](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706214113201.png)
+
+![image-20200706214146791](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706214146791.png)
+
+![image-20200706214208168](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706214208168.png)
+
+```python
+import csv
+
+with open('books.csv') as rf:
+    reader = csv.reader(rf)
+    headers = next(reader)
+    with open('books_out.csv', 'w') as wf:
+        writer = csv.writer(wf)
+        writer.writerow(headers)
+
+        for book in reader:
+            price = book[-2]
+            if price and float(price) >= 80.00:
+                writer.writerow(book)
+```
+
 ## 如何读写json数据
+
+![image-20200706214804328](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706214804328.png)
+
+![image-20200706215801129](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215801129.png)
+
+![image-20200706215316711](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215316711.png)
+
+
+
+```python
+import requests
+
+r = requests.get('http://httpbin.org/headers')                
+print(r)
+print(r.content)
+print(r.text)
+import json
+d = json.loads(r.text)          # 
+print(d)
+print(d['headers'])
+print(d['headers']['Host'])
+
+```
+
+![image-20200706215346145](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215346145.png)
+
+![image-20200706215419643](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215419643.png)
+
+![image-20200706215636757](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215636757.png)
+
+![image-20200706215740738](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215740738.png)
 
 ## 如何解析简单的xml文档
 
+![image-20200706215836310](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215836310.png)
+
+![image-20200706215853262](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215853262.png)
+
+![image-20200706215917156](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706215917156.png)
+
+![image-20200706220113738](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220113738.png)
+
+![image-20200706220256992](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220256992.png)
+
+![image-20200706220416343](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220416343.png)
+
+![image-20200706220532599](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220532599.png)
+
+![image-20200706220731256](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220731256.png)
+
 ## 如何构建xml文档
+
+![image-20200706220815632](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220815632.png)
+
+![image-20200706220840922](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706220840922.png)
+
+![image-20200706221123741](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221123741.png)
+
+![image-20200706221309987](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221309987.png)
+
+```python
+import csv
+from xml.etree.ElementTree import ElementTree, Element, SubElement
+
+def csv_to_xml(csv_path, xml_path):
+    with open(csv_path) as f:
+        reader = csv.reader(f)
+        headers = next(reader)
+
+        root = Element('Data')
+        root.text = '\n\t'
+        root.tail = '\n'
+
+        for row in reader:
+            book = SubElement(root, 'Book')
+            book.text = '\n\t\t'
+            book.tail = '\n\t'
+
+            for tag, text in zip(headers, row):
+                e = SubElement(book, tag)
+                e.text = text
+                e.tail = '\n\t\t'
+            e.tail = '\n\t'
+
+        ElementTree(root).write(xml_path, encoding='utf8')
+
+csv_to_xml('books.csv', 'books.xml')
+```
+
+![image-20200706221825770](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221825770.png)
 
 ## 如何读写excel文件
 
-# 类与对象深度问题与解决技巧
+![image-20200706221856836](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221856836.png)
 
-## 如何派生内置不可变类型并修其改实例化行为
+![image-20200706221917914](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221917914.png)
 
-## 如何为创建大量实例节省内存
+![image-20200706221932267](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706221932267.png)
 
-## 如何让对象支持上下文管理
+![image-20200706222101359](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706222101359.png)
 
-## 如何创建可管理的对象属性
+![image-20200706222230161](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706222230161.png)
 
-## 如何让类支持比较操作
+![image-20200706222337050](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706222337050.png)
 
-## 如何使用描述符对实例属性做类型检查
+![image-20200706222430145](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706222430145.png)
 
-## 如何在环状数据结构中管理内存
+![image-20200706222551887](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200706222551887.png)
 
-## 如何通过实例方法名字的字符串调用方法
+```python
+import xlrd, xlwt
 
-# 多线程与多进程
+rbook = xlrd.open_workbook('demo.xlsx')
+rsheet = rbook.sheet_by_index(0)
 
-## 多线程并发相关问题与解决技巧
+k = rsheet.ncols
+rsheet.put_cell(0, k, xlrd.XL_CELL_TEXT, '总分', None)
 
-## 如何使用多线程
+for i in range(1, rsheet.nrows):
+    t = sum(rsheet.row_values(i, 1))
+    rsheet.put_cell(i, k, xlrd.XL_CELL_NUMBER, t, None)
 
-##  如何线程间通信
 
-## 如何在线程间进行事件通知
+wbook = xlwt.Workbook()
+wsheet = wbook.add_sheet(rsheet.name)
 
-## 如何使用线程本地数据
+for i in range(rsheet.nrows):
+    for j in range(rsheet.ncols):
+        wsheet.write(i, j, rsheet.cell_value(i, j))
 
-## 如何使用线程池
+wbook.save('out.xlsx')
+```
 
-## 如何使用多进程
 
-# 装饰器使用问题与技巧
-
-## 如何使用函数装饰器
-
-## 如何为被装饰的函数保存元数据
-
-## 如何定义带参数的装饰器
-
-## 如何实现属性可修改的函数装饰器
-
-## 如何在类中定义装饰器
 
 
 
