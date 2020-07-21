@@ -9,21 +9,32 @@
 
 # 容器技术和Docker简介
 
-![image-20200628203151450](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203151450.png)
+* 很久之前
+  * 部署非常慢、成本非常高、资源浪费、难于迁移和扩展、可能会被限定硬件厂商
+* 虚拟化技术出现以后
+  * 一个物理机可以部署多个app
+  * 每个app独立运行在一个VM里
 
-![image-20200628203303712](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203303712.png)
+* 虚拟化的优点
+  * 资源池——一个物理机的资源分配到了不同的虚拟机里
+  * 很容易扩展——加物理机器or加虚拟机
+  * 很容易云化——亚马逊AWS、阿里云等
 
-![image-20200628203429048](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203429048.png)
+* 虚拟化的局限性
+  * 每一个虚拟机都是一个完整的操作系统，要给其分配资源，当虚拟机数量增多时，操作系统本身消耗的资源势必增多
 
-![image-20200628203449998](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203449998.png)
+* 容器解决了什么问题？
+  * 解决了开发和运维之间的矛盾
+  * 在开发和运维之间搭建了一个桥梁，是实现devops的最佳解决方案
+* 什么是容器？
+  * 对软件和其依赖的标准化打包
+  * 应用之间相互隔离
+  * 共享一个OS Kernel
+  * 可以运行在很多主流操作系统上
 
-![image-20200628203705610](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203705610.png)
-
-![image-20200628203722582](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203722582.png)
-
-![image-20200628203757868](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628203757868.png)
-
-
+* 容器和虚拟机的区别
+  * 容器是APP层面的隔离
+  * 虚拟化是物理资源层面的隔离
 
 # Docker环境的各种搭建方法
 
@@ -46,17 +57,48 @@
 
 ![image-20200628214643804](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628214643804.png)
 
+* docker server
+* docker client
+
 ![image-20200628214719155](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628214719155.png)
 
-![image-20200628214756974](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628214756974.png)
+* 低层技术支持
+  * Namespaces：做隔离pid，net，ipc，mnt，uts
+  * Control groups：做资源限制
+  * Union file systems：Container和image的分层
+* 什么是Image
+  * 文件和meta data的集合（root filesystem）
+  * 分层的，并且每一层都可以添加改变，删除文件，成为一个新的image
+  * 不同的image可以共享相同的layer
+  * Image本身是read-only的
 
 ![image-20200628215100863](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628215100863.png)
 
-![image-20200628215305739](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628215305739.png)
+* image的获取
 
-![image-20200628215406368](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628215406368.png)
+  * Build from Dockerfile
 
-![image-20200628220430722](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628220430722.png)
+    ```dockerfile
+    # more Dockerfile
+    FROM ubuntu:18.04
+    LABEL maintainer="Woody Fine <woodyfine@gmail.com>"
+    RUN apt-get update && apt-get install -y redis-server
+    EXPOSE 6379
+    ENTRYPOINT ["/usr/bin/redis-server"]
+    # docker build -t woodyfine/redis:latest .
+    ```
+
+  * Pull from Registry
+
+    ```shell
+    docker pull ubuntu:18.04
+    ```
+
+* 什么是Container
+  * 通过Image创建（copy）
+  * 在Image layer之上建立一个container layer（可读写）
+  * 类比面向对象：类和实例
+  * Image负责app的存储和分发，Container负责运行app
 
 ```shell
 # 删除所有容器
@@ -86,32 +128,109 @@ FROM ubuntu:14.04
 # RUN，每RUN一次会生成新的一层
 ```
 
-![image-20200628222353501](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222353501.png)
+* ==RUN==
 
-![image-20200628222433348](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222433348.png)
+  ```shell
+  # 反斜线换行
+  RUN yum update && yum install -y vim \
+  	python-dev          
+  # 注意清理cache  
+  RUN apt-get update && apt-get install -y perl \
+  	pwgen --no-install-recommends && rm -rf \
+  	/var/lib/apt/lists/*
+  RUN /bin/bash -c 'source $HOME/.bashrc; echo $HOME'	
+  ```
 
-![image-20200628222511400](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222511400.png)
+* ==WORKDIR==
 
-![image-20200628222529161](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222529161.png)
+  ```shell
+  # WORKDIR /root
+  WORKDIR /test                # 如果没有，会自动创建test目录
+  WORKDIR demo              
+  RUN pwd                      # 输出结果应该是 /test/demo
+  ```
 
-![image-20200628222700957](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222700957.png)
+  * 用WORKDIR，不要用RUN cd
+  * 尽量使用绝对目录
 
-![image-20200628222722576](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222722576.png)
+* ==ADD and COPY==
 
-![image-20200628222933534](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222933534.png)
+  ```shell
+  ADD hello /
+  ADD test.tar.gz /                  # 添加到根目录并解压
+  
+  WORKDIR /root
+  ADD hello test/                    # /root/test/hello
+  
+  WORKDIR /root
+  COPY hello test/
+  ```
 
-![image-20200628222959390](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628222959390.png)
+* ==ADD or COPY==
 
-![image-20200628223114651](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628223114651.png)
+  * 大部分情况，COPY优于ADD
+  * ADD除了COPY还有额外功能（解压）
+  * 添加远程文件/目录 请用curl或者wget
 
-![image-20200628223419656](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628223419656.png)
+* ==ENV==
 
-![image-20200628223453182](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628223453182.png)
+  ```shell
+  ENV MYSQL_VERSION 5.6                # 设置常量
+  RUN apt-get install -y mysql-server="${MYSQL_VERSION}" \
+  	&& rm -rf /var/lib/apt/lists/*     # 引用常量
+  ```
+
+* ==RUN、CMD、ENTRYPOINT==
+
+  * RUN：执行命令并创建新的Image Layer
+  * CMD：设置容器启动后默认执行的命令和参数
+  * ENTRYPOINT：设置容器启动时运行的命令
+
+* ==Shell和Exec格式==
+
+  ```shell
+  # Shell格式
+  RUN apt-get install -y vim
+  CMD echo "hello docker"
+  ENTRYPOINT echo "hello docker"
+  # Dockerfile
+  FROM centos
+  ENV name Docker
+  ENTRYPOINT echo "hello $name"
+  
+  # Exec格式
+  RUN ["apt-get", "install", "-y", "vim"]
+  CMD ["/bin/echo", "hello docker"]
+  ENTRYPOINT["/bin/echo", "hello docker"]
+  # Dockerfile
+  FROM centos
+  ENV name Docker
+  ENTRYPOINT ["/bin/echo", "hello $name"]
+  # Dockerfile
+  FROM centos
+  ENV name Docker
+  ENTRYPOINT ["/bin/bash", "-c", "ehco hello $name"]
+  ```
+
+* ==CMD==
+  * 容器启动时默认执行的命令
+  * 如果docker run指定了其他命令，CMD命令被忽略
+  * 如果定义了多个CMD，只有最后一个会执行
 
 * ==ENTRYPOINT==
-  * 
-
-![image-20200628223543023](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628223543023.png)
+  
+  * 让容器以应用程序或者服务的形式运行
+  
+  * 不会被忽略，一定会执行
+  
+  * 最佳实践：写一个shell脚本作为entrypoint
+  
+    ```dockerfile
+    COPY docker-entrypoint.sh /usr/local/bin
+    ENTRYPOINT ["docker-entrypoint.sh"]
+    EXPOSE 27017
+    CMD ["mongod"]
+    ```
 
 ```shell
 docker login
@@ -315,7 +434,7 @@ CONTAINER ID        IMAGE               COMMAND                  CREATED        
 [root@woody docker]# yum install bridge-utils
 [root@woody docker]# brctl show
 bridge name	bridge id		STP enabled	interfaces
-docker0		8000.02421fedf488	no		veth48e0fb6           # 和test1容器一对的，连接到docker0上，所以test1容器通过它连接到docker0上，所以容器能够访问外网
+docker0		8000.02421fedf488	no		veth48e0fb6           # 连接到docker0上，和test1容器一对的，所以test1容器通过它连接到docker0上，所以容器能够访问外网
 ```
 
 ```shell
@@ -497,9 +616,10 @@ FROM python:3.6.8
 LABEL maintaner="woodyfine@gmail.com"
 COPY . /app
 WORKDIR /app
-RUN pip3 install flask redis
+RUN pip3 install flask redis -i https://pypi.tuna.tsinghua.edu.cn/simple
 EXPOSE 5000
 CMD [ "python3", "app.py" ]
+# -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ![image-20200630230044304](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630230044304.png)

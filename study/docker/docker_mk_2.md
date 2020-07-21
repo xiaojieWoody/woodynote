@@ -4,6 +4,9 @@
 
 ![image-20200630233103990](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630233103990.png)
 
+* Docker持久化数据的方案
+  * 基于本地文件系统的Volume
+
 ![image-20200630233128533](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630233128533.png)
 
 ![image-20200630233210400](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630233210400.png)
@@ -27,6 +30,21 @@
 ![image-20200630234332435](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630234332435.png)
 
 * 映射，本地目录做修改，容器里对应的目录也会做修改
+
+  ```shell
+  [root@woody demo_volume]# vim index.html
+  <!doctype html>
+  <html lang-"en">
+  	<head>
+  		<meta charset="utf-8">
+  		<title>hello</title>
+  	</head>
+  	<body>
+  		<h1>Hello Docker! Hi Docker</h1>
+  	</body>
+  </html>
+  [root@woody demo_volume]# docker run -d -p 80:80 -v $(pwd):/usr/share/nginx/html --name web_v nginx
+  ```
 
   ![image-20200630234649308](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200630234649308.png)
 
@@ -367,6 +385,53 @@ http://127.0.0.1:8080
 
   ![image-20200701080117479](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701080117479.png)
 
+  ```shell
+  # 先用浏览器访问显示最新稳定版的版本号
+  https://storage.googleapis.com/kubernetes-release/release/stable.txt
+  # 使用那个版本号下载kubectl：
+  wget "https://storage.googleapis.com/kubernetes-release/release/v1.15.1/bin/linux/amd64/kubectl" -O "/usr/local/bin/kubectl"
+  # 或使用浏览器下载，然后上传到服务器
+  cp kubectl /usr/local/bin/
+  chmod +x /usr/local/bin/kubectl
+  curl -Lo minikube http://kubernetes.oss-cn-hangzhou.aliyuncs.com/minikube/releases/v1.2.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  # 启动minikube，启动过程中会下载kubeadm、kubelet和启动过程下载的东西
+  minikube start --vm-driver=none --registry-mirror=https://registry.docker-cn.com
+  # 检验是否能用
+  kubectl run hello-minikube --image=k8s.gcr.io/echoserver:1.4 --port=8080
+  kubectl get pod
+  
+  https://0eipo2bm.mirror.aliyuncs.com
+  
+  minikube start --image-mirror-country cn \
+      --iso-url=https://kubernetes.oss-cn-hangzhou.aliyuncs.com/minikube/iso/minikube-v1.6.0.iso \
+      --registry-mirror=https://0eipo2bm.mirror.aliyuncs.com \
+      --vm-driver=virtualbox
+  ```
+
+  ```shell
+  # kubectl
+  curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+  chmod +x ./kubectl
+  sudo mv ./kubectl /usr/local/bin/kubectl
+  kubectl version --client
+  
+  
+  kubectl config view
+  kubectl config get-contexts
+  kubectl cluster-info
+  minikube ssh
+  kubectl exec -it podId sh
+  
+  
+  
+  kubectl describe pod nginx-pod
+  
+  # pod端口映射到宿主机上
+  kubectl port-forward nginx-pod 8080:80
+  ```
+
+  
+
   ## 安装
 
   * Minikube，单节点
@@ -417,6 +482,7 @@ http://127.0.0.1:8080
     * 方式一：界面不能中断，否则映射停止
 
     ![image-20200701082846906](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701082846906.png)
+    
     * 方式二：？？？？待查询资料
 
 # 容器的运维和监控

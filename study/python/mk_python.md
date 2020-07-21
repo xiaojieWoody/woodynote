@@ -810,7 +810,7 @@ city_temp(**a)
   # global关键字
   def demo():
     global c             # 变成全局变量
-    c = 2
+    c = 2                # 需先定义，再赋值
   
   demo()
   print(c)
@@ -1171,7 +1171,7 @@ student.print_file()
   ```python
   # 不可变、可防止相同标签
   # 不可做大小比较，可做 == 和 is比较
-  # Python中没有常量
+  # Python中没有常量，一切皆对象
   from enum import Enum
   
   class VIP(Enum):
@@ -1200,7 +1200,10 @@ student.print_file()
       print(v_1)    
   
   for v_2 in VIP.__members__.items() :
-      print(v_2)   
+      print(v_2)
+      print(v_2[1])
+      print(v_2[1].name)
+      print(v_2[1].value)
   
   # 枚举转换
   a = 1
@@ -1375,6 +1378,11 @@ student.print_file()
   # 结果长度取决于较少长度的参数个数
   r = map(lambda x,y: x * x + y, list_x, list_y)
   print(list(r))
+  
+  l1 = [1,2,3,4,5]
+  l2 = [6,7]
+  r = map(lambda x, y: x + y, l1, l2)
+  print(list(r))         # [7, 9]
   ```
 
 * reduce
@@ -1501,6 +1509,7 @@ student.print_file()
   @decorator
   def f3(func_name1, func_name2, **kw):
       print('This is function: ' + func_name1 + ' : '  +  func_name2)
+      # 不能同时打印
       print(kw)                # {'a': 1, 'b': 2, 'c': '123'}
   
   f1('test func')

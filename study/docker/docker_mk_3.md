@@ -1,6 +1,76 @@
+```shell
+kubectl delete pods podName
+kubectl create -f rc_nginx.yml
+kubectl get rc
+# kubectl scale rc nginx --relicas=2
+kubectl scale --replicas=2 -f rc_nginx.yml
+kubectl get pods -o wide
+
+```
+
+
+
 * ReplicationController
 
-![image-20200701083320931](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701083320931.png)
+  ```yml
+  # rc_nginx.yml
+  apiVersion: v1
+  kind: ReplicationController 
+  metadata:
+    name: nginx
+  spec:
+    replicas: 3
+    selector:
+      app: nginx
+    template:
+      metadata:
+        name: nginx
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx
+          ports:
+          - containerPort: 80
+  ```
+
+* ReplicaSet
+
+  ```yml
+  # rs_nginx.yml
+  apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    name: nginx
+    labels:
+      tier: frontend
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        tier: frontend
+    template:
+      metadata:
+        name: nginx
+        labels:
+          tier: frontend
+      spec:
+        containers:
+        - name: nginx
+          image: nginx
+          ports:
+          - containerPort: 80
+  ```
+
+  ```shel
+  kubectl create -f rs_nginx.yml
+  kubectl scale --replicas=2 -f rs_nginx.yml
+  kubectl get pods -o wide
+  kubectl delete -f rs_nginx.yml
+  ```
+
+  
 
 ![image-20200701083346103](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701083346103.png)
 
@@ -16,21 +86,51 @@
 
 ![image-20200701083828136](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701083828136.png)
 
-* ReplicationSet
-
-![image-20200701084142354](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701084142354.png)
-
-![image-20200701084216207](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701084216207.png)
-
-![image-20200701084255393](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701084255393.png)
-
-![image-20200701084320479](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701084320479.png)
-
 * Deployment
 
 ![image-20200701211248218](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701211248218.png)
 
 * deployment_nginx.yml
+
+  ```yml
+  # deployment_nginx.yml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: nginx-deployment
+    labels:
+      app: nginx
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: nginx
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:1.12.2
+          ports:
+          - containerPort: 80
+  ```
+
+  ```shell
+  kubectl create -f depolyment_nginx.yml
+  kubectl get deployment
+  kubectl get pods
+  kubectl get deployment -o wide
+  kubectl set image deployment nginx-deployment nginx=nginx:1.13
+  
+  kubectl get node -o wide
+  kubectl expose deployment nginx-deployment --type=NodePort
+  kubectl delete services nginx-deployment
+  kubectl get svc
+  ```
+
+  
 
 ![image-20200701215300191](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200701215300191.png)
 
