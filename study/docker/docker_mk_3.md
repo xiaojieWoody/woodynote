@@ -179,3 +179,92 @@ kubectl get pods -o wide
 
 
 * 9-7开始重看
+
+
+
+
+
+
+
+# kubernetes基本概念和操作
+
+```shell
+[root@k8s-master ~]# cd .kube/
+[root@k8s-master .kube]# ls
+cache  config  http-cache
+[root@k8s-master .kube]# more config
+```
+
+```shell
+kubectl get node
+kubectl describe node k8s-master
+# -o 输出
+kubectl get node -o wide
+kubectl get node -o yaml
+kubectl get node -o json
+
+
+
+# 设置label
+kubectl label node k8s-master env=test
+kubectl get node --show-labels
+# 删除label
+kubectl label node k8s-master env-
+
+# roles  ，特殊的lebel
+kubectl get node
+kubectl get node --show-labels
+kubectl label node k8s-node1 node-role.kubernetes.io/worker=
+kubectl label node k8s-node2 node-role.kubernetes.io/worker=
+kubectl get node
+```
+
+​	
+
+* Pod
+
+  ![image-20200731205804251](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200731205804251.png)
+
+  ![image-20200731205934440](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200731205934440.png)
+
+  ```shell
+  kubectl exec nginx-busybox -c nginx date
+  kubectl exec nginx-busybox -c nginx hostname
+  
+  kubectl exec nginx-busybox -c busybox hostname
+  
+  kubectl exec nginx-busybox -it sh
+  
+  kubectl exec nginx-busybox -it -c busybox sh
+  wget 127.0.0.1
+  more index.html
+  ```
+
+  ![image-20200731211241695](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200731211241695.png)
+
+  ```shell
+  kubectl get namespace
+  kubectl create namespace demo
+  kubectl get pod -n demo
+  
+  kubectl get pod -A
+  ```
+
+  ![image-20200731211413924](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200731211413924.png)
+
+  
+
+```shell
+ kubectl config get-contexts
+ 
+
+ kubectl config view
+ 
+ kubectl config set-context demo --user=kubernetes-admin --cluster=kubernetes --namespace=demo
+ kubectl config view
+  
+ kubectl config use-context demo
+ 
+ kubectl config delete-context demo
+```
+
