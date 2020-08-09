@@ -1,5 +1,35 @@
 # 搭建Centos7虚拟机
 
+* 使用国内镜像源
+
+  ```shell
+  [root@bogon ~]# cd /etc/yum.repos.d/
+  [root@bogon yum.repos.d]# mkdir repo_bak
+  [root@bogon yum.repos.d]# mv *.repo repo_bak/
+  
+  [root@bogon yum.repos.d]# wget http://mirrors.aliyun.com/repo/Centos-7.repo
+  [root@bogon yum.repos.d]# wget http://mirrors.163.com/.help/CentOS7-Base-163.repo
+  [root@bogon yum.repos.d]# ls
+  Centos-7.repo  CentOS-Base-163.repo  repo.bak
+  [root@bogon yum.repos.d]# yum clean all
+  [root@bogon yum.repos.d]# yum makecache
+  
+  # 安装epel源
+  [root@bogon yum.repos.d]# yum list | grep epel-release
+  [root@bogon yum.repos.d]# yum install -y epel-release
+  [root@bogon yum.repos.d]# ls			# epel源安装成功，比原来多了一个epel.repo和epel-testing.repo文件
+  Centos-7.repo  CentOS-Base-163.repo  epel.repo  epel-testing.repo  repo.bak
+  # 使用阿里开源镜像提供的epel源
+  [root@bogon yum.repos.d]# wget -O /etc/yum.repos.d/epel-7.repo http://mirrors.aliyun.com/repo/epel-7.repo   
+  [root@bogon yum.repos.d]# ls
+  CentOS7-Base-163.repo  Centos-7.repo  epel-7.repo  epel.repo  epel-testing.repo  repo_bak
+  [root@bogon yum.repos.d]# yum clean all
+  [root@bogon yum.repos.d]# yum makecache
+  # 查看系统可用的yum源和所有的yum源
+  [root@bogon yum.repos.d]# yum repolist enabled
+  [root@bogon yum.repos.d]# yum repolist all
+  ```
+
 * 虚拟机设置网络为桥接模式
 
 ## 修改主机名

@@ -516,11 +516,11 @@ kubectl describe pods -n kube-system coredns-8567978547-7d9wq
     # slave
     # 1. 下载解压 harbor-offline-installer-v1.9.4.tgz
     # 2. 修改配置文件harbor.yml
-    hostname: 192.168.0.162
+    hostname: 192.168.0.162        # 本机ip
     # 3. 安装docker-compose
     sudo curl -L "https://github.com/docker/compose/releases/download/1.25.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     # 国内镜像
-    curl -L https://get.daocloud.io/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+    curl -L https://get.daocloud.io/docker/compose/releases/download/1.26.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
     
     sudo chmod +x /usr/local/bin/docker-compose
     docker-compose -version
@@ -549,7 +549,7 @@ kubectl describe pods -n kube-system coredns-8567978547-7d9wq
     
     stream {
     	upstream hub {
-    		server 192.168.0.162:80;
+    		server 192.168.0.242:80;          # worker ip
     	}
     	server {
     		listen 80;
@@ -570,6 +570,9 @@ kubectl describe pods -n kube-system coredns-8567978547-7d9wq
     # 3. 启动nginx
     sh restart.sh
     docker logs 0a9f1
+    
+    # 访问
+    http://masterIP
     ```
     
     ```shell
