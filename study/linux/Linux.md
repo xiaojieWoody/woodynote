@@ -1,3 +1,20 @@
+# 常用命令
+
+```shell
+# 删除退出的容器
+for i in `docker ps -a|grep -i exit|awk '{print $1}'`;do docker rm -f $i;done
+# 查看端口是否被监听
+netstat -luntp|grep 81
+# 下载网页
+wget www.baidu.com -O index.html
+# 查看环境变量
+printenv
+# 查看系统
+cat /etc/redhat-release
+```
+
+
+
 ## 其他命令
 
 ```shell

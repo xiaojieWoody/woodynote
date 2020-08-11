@@ -1,4 +1,22 @@
-![image-20200809103223709](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200809103223709.png)
+# Docker好处
+
+* 使用Docker容器化封装应用程序的意义
+  * Docker引擎统一了基础设施环境-docker环境
+    * 硬件的配置
+    * 操作系统的版本
+    * 运行时环境的异构
+  * Docker引擎统一了程序打包（装箱）方式-docker镜像
+    * Java程序
+    * python程序
+    * nodejs程序
+  * Docker引擎统一了程序部署（运行）方式-docker容器
+    * java -jar ... -> docker run ...
+    * python manage.py runserver ... -> docker run ...
+    * npm run dev -> docker run ...
+
+# 环境准备
+
+## 安装
 
 ```shell
 curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
@@ -7,10 +25,13 @@ yum list docker --show-duplicates
 yum install -y yum-utils
 yum-config-manager -add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce/repo
 yum list docker-ce --show-duplicates
+
 yum install docker-ce
 systemctl enable docker
 systemctl start docker
 ```
+
+## 配置镜像地址
 
 ```shell
 vi /ect/docker/daemon.json
@@ -19,15 +40,17 @@ vi /ect/docker/daemon.json
 	"storage-driver":"overlay2",
 	"insecure-registries":["registry.access.redhat.com","quay.io"],
 	"registry-mirrors":["https://q2gr04ke.mirror.aliyuncs.com"],
-	"bip":"172.7.5.0/24",
+	"bip":"172.7.244.0/24",
 	"exec-opts":["native.cgroupdriver=systemd"],
 	"live-restore":true
 }
 
-# bip  有问题
+# bip给容器设置IP，方便排错，根据容器IP即可找到节点
+# 规律：
+# 宿主机IP的第四位为bip的第三位
+# 如 10.4.7.21  为 172.7.21.1/24
 
-172.17.0.2/16
-
+# 备用
 "registry-mirrors": ["https://0eipo2bm.mirror.aliyuncs.com"]
 ```
 
@@ -40,6 +63,7 @@ ${registry_name}/${repository_name}/${image_name}:${tag_name}
 如：docker.io/library/alpine:3.10.1
 
 docker login
+# docker hub
 94woodyfine
 
 # 登陆信息存放位置
@@ -75,13 +99,10 @@ docker run -d --name myalpine 94woodyfine/alpine:v3.10.3 /bin/sleep 300
 
 ps aux|grep sleep|grep -v grep
 
-# cp
+# 复制到容器内
 docker cp tmp.txt ContainerID:/
-docker exec -it ContainerID /bin/sh
-
 # 进入容器
-docker exec -it ContainerID /bin/sh
-
+docker exec -it ContainerID/ContainerName /bin/sh
 # 停止容器
 docker stop ContainerID/ContainerName
 # 启动容器
@@ -90,18 +111,19 @@ docker restart ContainerID/ContainerName
 # 删除容器
 docker rm ContainerID/ContainerName
 docker rm -f ContainerID/ContainerName
+# 查看容器信息
+docker inspect containerID
 
+# 删除退出的容器
 for i in `docker ps -a|grep -i exit|awk '{print $1}'`;do docker rm -f $i;done
 
-docker exec -it myalpine /bin/sh
-
-
+# commit制作镜像
 docker commit -p myalpine 94woodyfine/alpine:v3.10.3_with_hello.txt
 docker images
 docker run -it 94woodyfine/alpine:v3.10.3_with_hello.txt /bin/sh
 
 # 导出镜像
-docker save ImageID > alpine:v3.10.3_with_hello.txt
+docker save ImageID > alpine:v3.10.3_with_hello
 docker rmi -f ImageID
 # 导入镜像
 docker load < alpine\:v3.10.3_with_hello.txt
@@ -118,7 +140,7 @@ docker logs containerID
 
 ## 映射端口
 
-* docker run -p 容器外端口:容器内端口
+* `docker run -p 容器外端口:容器内端口`
 
   ```shell
   docker pull nginx:1.12.2
@@ -130,7 +152,7 @@ docker logs containerID
 
 ## 挂载数据卷
 
-* docker run -v 容器外目录:容器内目录
+* `docker run -v 容器外目录:容器内目录`
 
   ```shell
   mkdir html
@@ -149,7 +171,7 @@ docker logs containerID
 
 ## 传递环境变量
 
-* docker run -e 环境变量key=环境变量value
+* `docker run -e 环境变量key=环境变量value`
 
   ```shell
   docker run --rm -e E_OPTS=abcdefg -e C_OPTS=abcdefg 94woodyfine/alpine:v3.10.3 printenv
@@ -157,7 +179,7 @@ docker logs containerID
 
 ## 容器内安装软件
 
-* yum/apt-get/apt等
+* `yum/apt-get/apt等`
 
   ```shell
   docker exec -it ContainerID /bin/sh
@@ -200,6 +222,9 @@ docker logs containerID
 
 ## USER/WORKDIR指令
 
+* USER指定用户
+* WORKDIR相当于cd
+
 ```shell
 cd /data/dockerfile/demo_1
 vim Dockerfile
@@ -230,7 +255,7 @@ docker run --rm -it --name nginx123 -P 94woodyfine/nginx:curl_add_expose /bin/ba
 	# 启动nginx
 	root@654c08836760:/# nginx -g "daemon off;"
 	
-# -P 和 EXPOSE 配合	
+# -P 和 EXPOSE 配合	，宿主器随机启动个端口和容器暴露的端口进行映射
 docker run --rm -d --name nginx123 -P 94woodyfine/nginx:curl_add_expose
 
 # 宿主机
@@ -333,26 +358,32 @@ http://demo.od.com/
 
 ## NAT(默认)
 
-* docker run -it --rm myalpine /bin/sh
-* ip add
+```shell
+docker run -it --rm myalpine /bin/sh
+ip add
+```
 
 ## None
 
-* docker run -it --rm --net=none myapline /bin/sh
-* ip add
+```shell
+# 容器不设置网络
+docker run -it --rm --net=none myapline /bin/sh
+ip add
+```
 
 ## Host
 
-* 和宿主机一样
-
-* docker run -it --rm  --net=host myalpine /bin/sh
-* ip add
+```shell
+# 和宿主机一样
+docker run -it --rm  --net=host myalpine /bin/sh
+ip add
+```
 
 ## 联合网络
 
-* 容器共享网络
-
-* docker run -it --rm --net=container:1b12se3 94woodyfine/nginx:curl /bin/bash
-
+```shell
+# 容器共享网络
+docker run -it --rm --net=container:1b12se3 94woodyfine/nginx:curl /bin/bash
+```
 
 

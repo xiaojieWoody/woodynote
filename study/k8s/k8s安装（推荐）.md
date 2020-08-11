@@ -1,5 +1,7 @@
 # Kubeadm
 
+==可以安装成功==
+
 ## 1. 安装要求
 
 - 一台或多台机器，操作系统 CentOS7.x-86_x64；
@@ -94,77 +96,76 @@ EOF
   ```shell
   $ yum install -y kubelet-1.18.0 kubeadm-1.18.0 kubectl-1.18.0
   $ systemctl enable kubelet
+  ```
   
-# 启动kubelet 
+* kubelet：systemd守护进程管理
+
+* kubeadm：部署工具
+
+* kubectl：k8s命令行管理工具
+
+  ```shell
+  # 启动kubelet
   systemctl start kubelet
   
-  
   [root@k8s-master ~]# systemctl status kubelet -l
-  ● kubelet.service - kubelet: The Kubernetes Node Agent
-     Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; vendor preset: disabled)
-    Drop-In: /usr/lib/systemd/system/kubelet.service.d
-             └─10-kubeadm.conf
-     Active: activating (auto-restart) (Result: exit-code) since 四 2020-07-30 20:08:32 CST; 9s ago
-       Docs: https://kubernetes.io/docs/
-    Process: 9984 ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS (code=exited, status=255)
-   Main PID: 9984 (code=exited, status=255)
+  kubelet.service - kubelet: The Kubernetes Node Agent
+  Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; vendor preset: disabled)
+  Drop-In: /usr/lib/systemd/system/kubelet.service.d
+  └─10-kubeadm.conf
+  Active: activating (auto-restart) (Result: exit-code) since 四 2020-07-30 20:08:32 CST; 9s ago
+  Docs: https://kubernetes.io/docs/
+  Process: 9984 ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS (code=exited, status=255)
+  Main PID: 9984 (code=exited, status=255)
   
   7月 30 20:08:32 k8s-master systemd[1]: kubelet.service: main process exited, code=exited, status=255/n/a
   7月 30 20:08:32 k8s-master systemd[1]: Unit kubelet.service entered failed state.
   7月 30 20:08:32 k8s-master systemd[1]: kubelet.service failed.
-  
   # 解决
-  # 关闭swap：
+  ## 关闭swap
   $ swapoff -a  # 临时
   $ vim /etc/fstab  # 注释 swap 行 # 永久 
   ```
-  
-  * kubelet：systemd守护进程管理
-  * kubeadm：部署工具
-  * kubectl：k8s命令行管理工具
-
 ## 4. 部署Kubernetes Master
 
 * 在192.168.31.61（Master）执行
 
   ```shell
   $ kubeadm init \
-  --apiserver-advertise-address=192.168.0.241 \
-  --image-repository registry.aliyuncs.com/google_containers \
-  --kubernetes-version v1.18.0 \
-  --service-cidr=10.96.0.0/12 \
-  --pod-network-cidr=10.244.0.0/16
-  
-  
-  
+    --apiserver-advertise-address=192.168.0.241 \
+    --image-repository registry.aliyuncs.com/google_containers \
+    --kubernetes-version v1.18.0 \
+    --service-cidr=10.96.0.0/12 \
+    --pod-network-cidr=10.244.0.0/16
+    
   FileContent--proc-sys-net-bridge-bridge-nf-call-iptables]: /proc/sys/net/bridge/bridge-nf-call-iptables contents are not set to 1
-  [preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`
-  To see the stack trace of this error execute with --v=5 or higher
-  
-  
-  # In order to set /proc/sys/net/bridge/bridge-nf-call-iptables by editing /etc/sysctl.conf. There you can add [1]
-  vi /etc/sysctl.conf
-  	net.bridge.bridge-nf-call-iptables = 1
-  # Then execute
-  sudo sysctl -p
-  
-  
-  
+    [preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`
+    To see the stack trace of this error execute with --v=5 or higher
+    
+    # In order to set /proc/sys/net/bridge/bridge-nf-call-iptables by editing /etc/sysctl.conf. There you can add [1]
+    vi /etc/sysctl.conf
+    	net.bridge.bridge-nf-call-iptables = 1
+    # Then execute
+    sudo sysctl -p  
+  ```
+
+  ```shell
   To start using your cluster, you need to run the following as a regular user:
   
-    mkdir -p $HOME/.kube
-    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
   
   You should now deploy a pod network to the cluster.
   Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
-    https://kubernetes.io/docs/concepts/cluster-administration/addons/
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
   
   Then you can join any number of worker nodes by running the following on each as root:
   
   kubeadm join 192.168.0.241:6443 --token 2xc47j.zf74g5oe6htjaxof \
-      --discovery-token-ca-cert-hash sha256:34bfcc7ad040b48a6edbcaeb5f8e212cb3536d88060df3f1dd192e058e7721e3
+  --discovery-token-ca-cert-hash sha256:34bfcc7ad040b48a6edbcaeb5f8e212cb3536d88060df3f1dd192e058e7721e3
   ```
+
   * —apiserver-advertise-address 集群通告地址
   * —image-repository 由于默认拉取镜像地址k8s.gcr.io国内无法访问，这里指定阿里云镜像仓库地址。
   * —kubernetes-version K8s版本，与上面安装的一致
@@ -253,6 +254,7 @@ $ wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/
   ```
 
   ```shell
+  # 推荐
   wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
   
   vim recommended.yaml
@@ -274,7 +276,7 @@ $ wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/
     selector:
       k8s-app: kubernetes-dashboard
   ---
-  #因为自动生成的证书很多浏览器无法使用，所以我们自己创建，注释掉kubernetes-dashboard-certs对象声明
+  #因为自动生成的证书很多浏览器无法使用，所以自己创建，注释掉kubernetes-dashboard-certs对象声明
   #apiVersion: v1
   #kind: Secret
   #metadata:
@@ -363,11 +365,9 @@ $ wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/
   namespace:  20 bytes
   token:      eyJhbGciOiJSUzI1NiIsImtpZCI6Iko4VWpEMWN4aVYtVGFmWU80STBPZFV1OUEtekNsTWYtTlFHVzlWWlBwMG8ifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tcWx2eDgiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiYzkwMTQwMjgtNDNhMC00ZDUwLTllY2ItMGEzZjZhYTk2YWUwIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmVybmV0ZXMtZGFzaGJvYXJkOmRhc2hib2FyZC1hZG1pbiJ9.GAvZ0n4msgi7WXiKQxyTaqFrg_0qfyM68VPTbC0sHo-HUfd1mP4nH0YJ2sY0Q5RMjf4Zmi0MS4lG_Fc15OJm8RTtSDMRlaN1FIQcA3Ft8Qh6LQdtASZlco8xjj5nKPUIXcX9Ue5wEtAu83jYmLtNCIHBkORr2FaheyUglpJ8GFkO90-qhktgPux3KCCqCuEdTlY3vLUjzrwLjAFEl8vpvVOWRYymKPUl22e3z6dwMEawhaKpVMrm_UKpbkmrAb3wnIqS03H8-s0jxYsepAXm0t1g4ROvcASBIfY6i2hyIeYNbbGN5pSsHrb0Vx74Y-KmQ-8r4jrG6BB-hr_omKa8mg
   
-  # 访问
+  # 访问（Chrome访问不了，试下Safari）
   https://192.168.175.101:30000
   ```
-
-  
 
 * 访问地址：https://NodeIP:30001
 
@@ -382,9 +382,6 @@ $ wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/
   
   # 获取用户Token
   $ kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
-  
-  
-  
   
   
   [root@k8s-master ~]# kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
@@ -402,7 +399,7 @@ $ wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/
   namespace:  11 bytes
   token:      eyJhbGciOiJSUzI1NiIsImtpZCI6Iko4VWpEMWN4aVYtVGFmWU80STBPZFV1OUEtekNsTWYtTlFHVzlWWlBwMG8ifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tbXd6ZjQiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiY2RlNmUwOWUtYTNkMC00OTA0LTkxZTctNmM0OTFhNzYzNGUwIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.BdE3XP66EEKcDeTx4JYY-Y7SZyuvB3HSetg7BJGnbtZMDhQGhqo9w1wQkzXvIX-jPXJu_x9VoP_oLnwtdSynQRee_yc8tPfKz16vcmdP82FAUf8hVXf4LI7sAkzSFn_5u9_7KcMq9awuF6GeJdWW55Ei3jcXySADjLAP0XwXL91uQz-Rj1fPad78wE37050kF1X-2DOWylNg_tHDBqVuaUCa6_SkaKx4j-FhsEL3rQrx-fIjTy6E07bnTiTJvyFxoK-tuYnrrK4pyHiAADDoPxlM7KPltJCBTRLFzE3vj3g0cRguix4tk34RlyZIt8dJW9GOhSC3itSHX7RvFx8UmA
   ```
-
+  
 * 使用输出的Token登录Dashboard
 
   ![image-20200729223754909](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200729223754909.png)
