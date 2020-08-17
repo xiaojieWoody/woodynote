@@ -295,8 +295,25 @@ ssh slave2  # slave1上
   sudo apt-get install openssh-server
   # 检查一下服务的状态
   sudo service ssh status
+  
+  # 安装防火墙
+  sudo apt-get install ufw
+  # 开放防火墙
+  sudo ufw enable
+  # 防火墙充许22端口对外开放
+  sudo ufw allow 22 
   ```
 
+* 安装gcc
+
+  ```shell
+  sudo apt update
+  # 安装build-essential软件包：包括gcc，g ++和make
+  sudo apt install build-essential
+  ```
+  
+  
+  
 * 切换root
 
   ```shell
@@ -312,6 +329,21 @@ https://blog.csdn.net/davidhzq/article/details/102991577
 IPv4
 手动
 地址 192.168.0.229  255.255.255.0  192.168.0.1
-DNS	 8.8.8.8，8.8.4.4
+DNS	 8.8.8.8，8.8.4.4 
+```
+
+```shell
+
+02、键入以下命令安装build-essential软件包：
+
+linuxidc@linuxidc:~/www.linuxidc.com$ sudo apt install build-essential
+
+该命令将安装一堆新包，包括gcc，g ++和make。
+
+03、要验证GCC编译器是否已成功安装，请使用gcc --version命令打印GCC版本：
+
+linuxidc@linuxidc:~/www.linuxidc.com$ gcc --version
+
+Ubuntu 18.04存储库中可用的默认GCC版本是7.4.0：
 ```
 
