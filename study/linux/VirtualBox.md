@@ -310,9 +310,9 @@ ssh slave2  # slave1上
   sudo apt update
   # 安装build-essential软件包：包括gcc，g ++和make
   sudo apt install build-essential
+  # 验证
+  gcc --version
   ```
-  
-  
   
 * 切换root
 
@@ -332,18 +332,50 @@ IPv4
 DNS	 8.8.8.8，8.8.4.4 
 ```
 
-```shell
+# 移动硬盘中装Ubuntu
 
-02、键入以下命令安装build-essential软件包：
+* **工具：**
+  * Rufus（制作U盘启动盘）、DiskGenius（调整移动硬盘的分区大小）、U盘、移动硬盘
+  * https://www.pianshen.com/article/83071065557/
+* **下载ubuntu18.04镜像文件**
+  * https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/18.04/
+* **修改移动硬盘分区**
+  * 没有必要把移动硬盘格式化
+  * 有效操作是直接从硬盘的现存分区压缩出安装ubuntu系统的**空闲空间**即可
+    * 注意是压缩出空闲空间，并且这个空闲空间需要在整个磁盘的前面，因为系统引导项只扫描前137G空间，如果这片空间在磁盘尾很有可能安装之后ubuntu无法启动，这里需要用到DiskGenius，windows自带的磁盘管理无法做到调整压缩空间的位置
+  * ![image-20200818105451607](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200818105451607.png)
+  * 压缩之后的效果如图，可以看到磁盘首是压缩出来的600G空闲空间，同时注意红框，移动硬盘的架构是MBR，压缩出来就可以不用管了，具体的分区操作等到安装环节再来设置，那么剩下的1.2T空间格式为NTFS可以正常存储数据
+* **制作U盘启动盘**
+  * 打开Rufus，选择U盘和下载好的镜像文件，其他的选择默认即可，准备就绪就可以直接开始
+* **BIOS设置**
+  * 惠普为例子
+  * 开机时，按F10进入BIOS，启动选项中：
+    * 禁用安全模式
+    * “USB闪存驱动器/USB硬盘”上移到“操作系统的启动管理员”之上
+* **开始安装Ubuntu18.04**
+  * 插好U盘和移动硬盘
+  * 直接点install ubuntu
+  * 等到选择安装类型这个界面时间，一定要选择“其他选项”，不要选其他的
+  * 之后进入分区界面，这里分区采取最简方式
+    * 选中600G的空闲分区，点左下角+号进入分区模式
+    * /boot ext4 2G
+    * / ext4 100G
+    * swap swap 16G
+    * /home ext4 剩多少给多少
+  * 最后的“安装启动引导的设备”就要选择移动硬盘，千万不能选别的，不然很有可能最后windows进不去了，移动硬盘是/dev/sdb，就一定要选/dev/sdb
+  * 设置好后继续安装，等待一段时间后，安装完成重启即可
+  * 重启之后就能正常进入grub2引导界面选择进入ubuntu还是windows
 
-linuxidc@linuxidc:~/www.linuxidc.com$ sudo apt install build-essential
 
-该命令将安装一堆新包，包括gcc，g ++和make。
 
-03、要验证GCC编译器是否已成功安装，请使用gcc --version命令打印GCC版本：
+* 开机时按F9可选择是windows还是ubuntu启动
 
-linuxidc@linuxidc:~/www.linuxidc.com$ gcc --version
 
-Ubuntu 18.04存储库中可用的默认GCC版本是7.4.0：
-```
+
+* 自己
+
+* 插入移动硬盘、U盘，开机，从USB硬盘启动
+  * 按esc，进入grub>
+  * 输入exit
+  * 选择Ubuntu启动
 

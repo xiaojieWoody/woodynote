@@ -657,7 +657,11 @@ public class MultiTransferMoney {
     * 以太网的指数退避算法
     * 加入随机因素
 
-  ![image-20200719220126139](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719220126139.png)
+* 有死锁和资源耗尽的风险
+
+  * 死锁：每个哲学家都拿着左手的餐叉，永远都在等右边的餐叉（或者相反）
+  * 活锁：在完全相同的时刻进入餐厅，并同时拿起左边的餐叉，那么这些哲学家就会等待五分钟，同时放下手中的餐叉，再等五分钟，又同时拿起这些餐叉
+  * 在实际的计算机问题中，缺乏餐叉可以类比为缺乏共享资源
 
   ```java
   import java.util.Random;
@@ -772,37 +776,75 @@ public class MultiTransferMoney {
 * 实际工程中如何避免死锁
 * 什么是活跃性问题？活锁、饥饿和死锁有什么区别
 
-![image-20200719223704402](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223704402.png)
+#  面试高频考点
 
-![image-20200719223733205](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223733205.png)
+* 有多少种实现线程的方法？典型错误答案和正确答案
+* 实现Runnable接口和继承Thread类哪种方式更好？
+* 一个线程两次调用start()方法会出现什么情况？为什么？
+* 既然start()方法会调用run()方法，为什么我们选择调用start()方法，而不是直接调用run()方法呢？
+* 如何正确停止一个线程？
+* 如何处理不可中断的阻塞（例如抢锁时ReentrantLock.lock()或者Socket I/O时无法响应中断，那应该怎么让该线程停止呢？）
+* 线程有哪几种状态？生命周期是什么？
+* 如何用wait()实现两个线程交替打印0-100的奇偶数？
+* 为什么要使用生产和和消费者模式？
+* 什么是生产者消费者模式？
+* 如何用wait实现生产者模式？
+* 为什么wait必须在同步代码块中使用？
+* 为什么线程通信的方法wait()，notify()和notifyAll()被定义在Object类里？而sleep定义在Thread类里？
+* wait方法是属于Object对象的，那调用Thread.wait会怎么样？
+* 如何选择notify还是notifyAll？
+* notifyAll之后所有的线程都会再次抢夺锁，如果某线程抢夺失败怎么办？
+* 用suspend()和resume()来阻塞线程可以吗？为什么？
+* wait/notify、sleep的异同（方法属于哪个对象？线程状态怎么切换？）
+* 在join期间，线程处于哪种线程状态？
+* yield和sleep区别？
+* 守护线程和普通线程的区别？
+* 是否需要给线程设置为守护线程？
+* 为什么程序设计不应依赖于线程优先级？
+* Java异常体系是怎样的？
+* 实际工作中，如何全局处理异常？
+* 为什么异常需要全局处理？不处理行不行？
+* run方法是否可以抛出异常？如果抛出异常，线程的状态会怎么样？
+* 一共有哪几类线程安全问题？
+* 哪些场景需要额外注意线程安全问题？
+* 为什么多线程会带来性能问题？
+* 何时会导致密集的上下文切换？
+* 什么是多线程的上下文切换？
+* Java代码如何一步步转化，最终被CPU执行
+* 单例模式的作用和适用场景？
+* 重排序的实例：单例模式多种写法、单例和高并发的关系？
+* 单例各种写法的适用场合？
+* 饿汉式的缺点？
+* 懒汉式的缺点？
+* 为什么要用double-check？不用就不安全吗？
+* 为什么双重检查模式要用volatile？
+* 应该如何选择，用哪种单例的实现方案最好？为什么？
+* 什么是Java内存模型？
+* 什么是happend-before？
+* Happens-Before规则有哪些？
+* 讲讲volatile关键字？
+* volatile的适用场合？
+* volatile的作用？两点
+* volatile和synchronized的异同？
 
-![image-20200719223800859](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223800859.png)
+* 什么是以及为什么会有内存可见性问题？
+* 什么是主内存和本地内存？
+* 主内存和本地内存的关系？
+* 什么是原子操作？
+* Java中的原子操作有哪些？
+* long和double的原子性你了解吗？
+* 生成对象的过程是不是原子操作？
+* 写一个必然死锁的例子？
+* 生产中什么场景下会发生死锁？
+* 发生死锁必须满足哪些条件？
+* 如何用工具定位死锁？
+* 有哪些解决死锁问题的策略？
+* 避免策略和检测与恢复策略的主要思路是什么？
+* 什么是经典的哲学家就餐问题？怎么解决？
+* 实际开发中如何避免死锁？
+* 什么是活跃性问题？活锁、饥饿和死锁有什么区别？
 
-![image-20200719223820390](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223820390.png)
-
-![image-20200719223832414](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223832414.png)
-
-![image-20200719223846868](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223846868.png)
 
 
 
-![image-20200719223908900](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223908900.png)
-
-![image-20200719223921948](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223921948.png)
-
-![image-20200719223935711](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223935711.png)
-
-![image-20200719223953747](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719223953747.png)
-
-![image-20200719224021732](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224021732.png)
-
-![image-20200719224056254](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224056254.png)
-
-![image-20200719224122159](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224122159.png)
-
-![image-20200719224136271](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224136271.png)
-
-![image-20200719224152788](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224152788.png)
-
-![image-20200719224205894](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200719224205894.png)
 

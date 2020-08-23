@@ -1197,82 +1197,82 @@ class User {
 * 自旋锁和阻塞锁
 
   * 阻塞或唤醒一个Java线程需要操作系统切换CPU状态来完成，这种状态转换需要耗费处理器时间
-
   * 如果同步代码块中的内容过于简单，状态转换消耗的时间有可能比用户代码执行的时间还要长
-
   * 在许多场景中，同步资源的锁定时间很短，为了这一小段时间去切换线程，线程挂起和恢复现场的花费可能会让系统得不偿失
+  * 如果物理机器有多个处理器，能够让两个或以上的线程同时并行执行，就可以让后面那个请求锁的线程不放弃CPU的执行时间，看看持有锁的线程是否很快就会释放锁
+  * 而为了让当前线程“稍等一下”，需让当前线程进行自旋，如果在自旋完成后前面锁定同步资源的线程已经释放了锁，那么当前线程就可以不必阻塞而是直接获取同步资源，从而避免切换线程的开销。这就是自旋锁
+  * 阻塞锁和自旋锁相反，阻塞锁如果遇到没拿到锁的情况，会直接把线程阻塞，直到被唤醒
 
-  * 
+* 自旋锁的缺点
 
-    ![image-20200726194316728](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726194316728.png)
+  * 如果锁被占用的时间很长，那么自旋的线程只会白浪费处理器资源
+  * 在自旋的过程中，一直消耗CPU，所以虽然自旋锁的起始开销低于悲观锁，但是随着自旋时间的增长，开销也是线性增长的
 
-    ![image-20200726194344861](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726194344861.png)
+* 原理和源码分析
+  * 在java1.5版本及以上的并发框架java.util.concurrent的atomic包下的类基本都是自旋锁的实现
+  * AtomicInteger的实现：自旋锁的实现原理是CAS，AtomicInteger中调用unsafe进行自增操作的源码中的do-while循环就是一个自旋操作，如果修改过程中遇到其他线程竞争导致没修改成功，就在while里死循环，直至修改成功
 
-    ![image-20200726194430340](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726194430340.png)
+* 缺点
 
-    ![image-20200726194455389](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726194455389.png)
+* 原理和源码分析
 
-    
+  ```java
+  import java.util.concurrent.atomic.AtomicReference;
+  
+  /**
+   * 描述：     自旋锁
+   */
+  public class SpinLock {
+  
+      private AtomicReference<Thread> sign = new AtomicReference<>();
+  
+      public void lock() {
+          Thread current = Thread.currentThread();
+          while (!sign.compareAndSet(null, current)) {
+              System.out.println("自旋获取失败，再次尝试");
+          }
+      }
+  
+      public void unlock() {
+          Thread current = Thread.currentThread();
+          sign.compareAndSet(current, null);
+      }
+  
+      public static void main(String[] args) {
+          SpinLock spinLock = new SpinLock();
+          Runnable runnable = new Runnable() {
+              @Override
+              public void run() {
+                  System.out.println(Thread.currentThread().getName() + "开始尝试获取自旋锁");
+                  spinLock.lock();
+                  System.out.println(Thread.currentThread().getName() + "获取到了自旋锁");
+                  try {
+                      Thread.sleep(300);
+                  } catch (InterruptedException e) {
+                      e.printStackTrace();
+                  } finally {
+                      spinLock.unlock();
+                      System.out.println(Thread.currentThread().getName() + "释放了自旋锁");
+                  }
+              }
+          };
+          Thread thread1 = new Thread(runnable);
+          Thread thread2 = new Thread(runnable);
+          thread1.start();
+          thread2.start();
+      }
+  }
+  ```
 
-  * 缺点
+* 适用场景
 
-  * 原理和源码分析
-
-    ```java
-    import java.util.concurrent.atomic.AtomicReference;
-    
-    /**
-     * 描述：     自旋锁
-     */
-    public class SpinLock {
-    
-        private AtomicReference<Thread> sign = new AtomicReference<>();
-    
-        public void lock() {
-            Thread current = Thread.currentThread();
-            while (!sign.compareAndSet(null, current)) {
-                System.out.println("自旋获取失败，再次尝试");
-            }
-        }
-    
-        public void unlock() {
-            Thread current = Thread.currentThread();
-            sign.compareAndSet(current, null);
-        }
-    
-        public static void main(String[] args) {
-            SpinLock spinLock = new SpinLock();
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    System.out.println(Thread.currentThread().getName() + "开始尝试获取自旋锁");
-                    spinLock.lock();
-                    System.out.println(Thread.currentThread().getName() + "获取到了自旋锁");
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } finally {
-                        spinLock.unlock();
-                        System.out.println(Thread.currentThread().getName() + "释放了自旋锁");
-                    }
-                }
-            };
-            Thread thread1 = new Thread(runnable);
-            Thread thread2 = new Thread(runnable);
-            thread1.start();
-            thread2.start();
-        }
-    }
-    ```
-
-  * 适用场景
-
-    ![image-20200726194941864](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726194941864.png)
+  * 自旋锁一般用于多核的服务器，在并发度不是特别高的情况下，比阻塞锁的效率高
+  * 另外，自旋锁适用于临界区比较短小的情况，否则如果临界区很大（线程一旦拿到锁，很久以后才会释放），那也是不合适的
 
 * 可中断锁
 
-  ![image-20200726195048634](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726195048634.png)
+  * 在Java中，synchronized就不是可中断锁，而Lock是可中断锁，因为tryLock(time)和lockInterruptibly都能响应中断
+  * 如果某一线程A正在执行锁中的代码，另一线程B正在等待获取该锁，可能由于等待时间过长，线程B不想等待了，想先处理其他事情，我们可以中断它，这种就是可中断锁
 
 * 锁优化
   * Java虚拟机对锁的优化
@@ -1280,31 +1280,40 @@ class User {
     * 锁消除
     * 锁粗化
 
-![image-20200726195359808](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726195359808.png)
-
-![image-20200726195517073](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726195517073.png)
+* 在写代码时如何优化锁和提高并发性能
+  1. 缩小同步代码块
+  2. 尽量不要锁住方法
+  3. 减少请求锁的次数
+  4. 避免人为制造热点
+  5. 锁中尽量不要再包含锁
+  6. 选择合适的锁类型或合适的工具类
 
 * 总结：千变万化的锁
 
   1. Lock接口
-
-  2. 锁的分类
-
+2. 锁的分类
   3. 乐观锁和悲观锁
-
-     ![image-20200726195626148](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726195626148.png)
-
-     ![image-20200726195744899](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726195744899.png)
+4. 可重入锁和非可重入锁，已ReentrantLock为例（重点）
+  5. 公平锁和非公平锁
+6. 共享锁和排它锁：以ReentrantReadWriteLock读写锁为例（重点）
+  7. 自旋锁和阻塞锁
+8. 可中断锁：可以响应中断的锁
+  9. 锁优化
 
 ## 多线程竞争时，是否排队
 
-![image-20200726185112331](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726185112331.png)
+* 公平指的是按照线程请求的顺序，来分配锁；非公平指的是，不完全按照请求的顺序，在一定情况下，可以插队
+* 注意：非公平也同样不提倡“插队”行为，这里的非公平，指的是“在合适的时机”插队，而不是盲目插队
+* 什么是合适的时机呢？
+* 实际情况并不是这样的，Java设计者这样设计的目的，是为了提高效率
 
-![image-20200726185253029](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726185253029.png)
-
-![image-20200726185512354](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726185512354.png)
-
-![image-20200726185623928](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726185623928.png)
+* 避免唤醒带来的空档期
+* 公平的情况（以ReentrantLock为例）
+  * 如果在创建ReentrantLock对象时，参数填写为true，那么这就是个公平锁
+* 不公平的情况（以ReentrantLock为例）
+  * 如果在线程1释放锁的时候，线程5恰好去执行lock()
+  * 由于ReentrantLock发现此时并没有线程持有lock这把锁（线程2还没来得及获取到，因为获取需要时间）
+  * 线程5可以插队，直接拿到这把锁，这也是ReentrantLock默认的公平策略，也就是“不公平”
 
 ```java
 import java.util.Random;
@@ -1379,9 +1388,12 @@ class PrintQueue {
 }
 ```
 
-![image-20200726190458457](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726190458457.png)
-
-![image-20200726190519030](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726190519030.png)
+* 特例：
+  * 针对tryLock()方法，它不遵守设定的公平的规则
+  * 例如，当有线程执行tryLock()的时候，一旦有线程释放了锁，那么这个正在tryLock的线程就能获取到锁，即使在它之前已经有其他线程在等待队列里了
+* 对比公平和非公平的优缺点
+  * 公平锁：优点——各线程公平平等，每个线程在等待一段时间后，总有执行的机会；缺点——更慢，吞吐量更小
+  * 不公平锁：优点——更快，吞吐量更大；缺点：有可能产生线程饥饿，也就是某些线程在长时间内，始终得不到执行
 
 ![image-20200726190539280](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200726190539280.png)
 
@@ -1455,8 +1467,9 @@ class PrintQueue {
   
 * ReentrantLock
 
-  ![image-20200724083356675](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200724083356675.png)
-
+  * isHeldByCurrentThread可以看出锁是否被当前线程持有
+* getQueueLength可以返回当前正在等待这把锁的队列有多长，一般这两个方法是开发和调试时候使用，上线后用到的不多
+  
   ```java
   /**
    * 描述：     演示多线程预定电影院座位
@@ -1485,8 +1498,8 @@ class PrintQueue {
           new Thread(() -> bookSeat()).start();
       }
   }
-  ```
-
+```
+  
   ```java
   /**
    * 描述：     演示ReentrantLock的基本用法，演示被打断
@@ -1601,9 +1614,12 @@ class PrintQueue {
 
 ## 什么是原子类，有什么作用？
 
-![image-20200727200651782](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727200651782.png)
-
-![image-20200727200720080](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727200720080.png)
+* 不可分割
+* 一个操作是不可中断的，即便是多线程的情况下也可以保证
+* java.util.concurrent.atomic
+* 原子类的作用和锁类似，是为了保证并发情况下线程安全。不过原子类相比于锁，有一定的优势
+  * 粒度更细：原子变量可以把竞争范围缩小到变量级别，通常锁的粒度都要大于原子变量的粒度
+  * 效率更高：通常，使用原子类的效率会比使用锁的效率更高，除了高度竞争的情况
 
 ## Atomic基本类型原子类，已AtomicInteger为例
 
@@ -1917,20 +1933,17 @@ class PrintQueue {
     ```
 * LongAdder带来的改进和原理
   * 在内部，这个LongAdder的实现原理和刚才的AtomicLong是有不同的，刚才的AtomicLong的实现原理是，每一次加法都需要做同步，所以在高并发的时候会导致冲突比较多，也就降低了效率
-  
   * 而此时的LongAdder，每个线程会有自己的一个计数器，仅用来在自己线程内计数，这样一来就不会和其他线程的计数器干扰。
-  
   * 如图中所示，第一个线程的计数器数值，也就是ctr’，为1的时候，可能线程2的计数器ctr’’的数值已经是3了，他们之间并不存在竞争关系,所以在加和的过程中，根本不需要同步机制，也不需要刚才的flush和refresh。这里也没有一个公共的counter来给所有线程统一计数。
-  
   * 可能聪明的小伙伴已经想到了，LongAdder最终是如何实现多线程计数的呢？答案就在最后一步，执行LongAdder.sum()的时候，这里是唯一需要同步的地方：
-  
-    ![image-20200727203914495](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727203914495.png)
-  
+  * LongAdder引入了分段累加的概念，内部有一个base变量和一个Cell[]数组共同参与计数
+    * base变量：竞争不激烈，直接累加到该变量上
+    * Cell[]数组：竞争激烈，各个线程分散累加到自己的槽Cell[i]中
   * 当我们执行sum函数的时候，LongAdder会把所有线程的计数器，也就是ctr’和ctr’’等等都在同步的情况下加起来，形成最终的总和：
-  
   * AtomicLong在多线程的情况下，每次都要同步，而LongAdder仅在最后sum的时候需要同步，其他情况下，多个线程可以同时运行，这就是LongAdder的吞吐量比AtomicLong大的原因，本质是空间换时间
-  
-    ![image-20200727204110505](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727204110505.png)
+  * 对比AtomicLong和LongAdder
+  * 在低争用下，AtomicLong和LongAdder这两个类具有相似的特征。但是在竞争激烈的情况下，LongAdder的预期吞吐量要高得多，但要消耗更多的空间
+    * LongAdder适合的场景是统计求和计数的场景，而且LongAdder基本只提供了add方法，而AtomicLong还具有cas方法
 
 ## Accumulator累加器
 
@@ -2062,8 +2075,11 @@ class PrintQueue {
 * Unsafe类中的compareAndSwapInt方法
   * 方法中先想办法拿到变量value在内存中的地址。
   * 通过Atomic::cmpxchg实现原子性的比较和替换，其中参数x是即将更新的值，参数e是原内存的值。至此，最终完成了CAS的全过程
-
-![image-20200727205801489](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727205801489.png)
+* 分析在Java中是如何利用CAS实现原子操作的？
+  * AtomicInteger加载Unsafe工具，用来直接操作内存数据
+  * 用Unsafe来实现底层操作
+  * 用volatile修饰value字段，保证可见性
+  * getAndAddInt方法分析
 
 ## 缺点
 
@@ -2158,8 +2174,10 @@ class PrintQueue {
   * 对象创建后，其状态就不能修改
   * 所有属性都是final修饰的
   * 对象创建过程中没有发生逸出
+  
+* 把变量写在线程内部——栈封闭
 
-![image-20200727223410173](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200727223410173.png)
+  * 在方法里新建的局部变量，实际上是存储在每个线程私有的栈空间，而每个栈的占空间是不能被其他线程所访问到的，所以不会有线程安全问题，这就是著名的“栈封闭”技术，是“线程封闭”技术的一种情况
 
 ```java
 /**
@@ -2309,18 +2327,20 @@ public class FinalStringDemo2 {
   * 红黑树介绍
     
     * 对二叉查找树BST的一种平衡策略，O(logN) VS O(N)
-    
     * 会自动平衡，防止极端不平衡从而影响查找效率的情况发生
-    
-      ![image-20200805080653679](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200805080653679.png)
-    
+      * 每个节点要么是红色，要么是黑色，但根节点永远是黑色的
+      * 红色节点不能连续（也即是，红色节点的孩子和父亲都不能是红色）
+      * 从任一节点到其子树中每个叶子节点的路径都包含相同数量的黑色节点
+      * 所有的叶节点都是黑色的
     * 红黑树是每个节点都带有颜色属性的二叉查找树，本质是对二叉查找树BST的一种平衡策略，颜色为红色或黑色。
-    
     * 我们理解为是一种平衡二叉查找树就可以，查找效率高，会自动平衡，防止极端不平衡从而影响查找效率的情况发生。
     
   * HashMap关于并发的特点
   
-    ![image-20200805080806462](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200805080806462.png)
+    1. 非线程安全
+    2. 迭代时不允许修改内容
+    3. 只读的并发是安全的
+    4. 如果一定要把HashMap用在并发环境，用Collections.synchronizedMap(new HashMap())
   
 * JDK1.7的ConcurrentHashMap实现和分析
   
@@ -2343,9 +2363,19 @@ public class FinalStringDemo2 {
   
   * 源码分析（1.8）
   
-    ![image-20200805081553871](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200805081553871.png)
-  
-    ![image-20200805081631757](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200805081631757.png)
+    * putVal流程
+    * 判断key value不为空
+      * 计算hash值
+      * 根据对应位置节点的类型，来赋值，或者helpTransfer，或者增长链表，或者给红黑树增加节点
+      * 检查满足阀值就“红黑树化”
+      * 返回oldVal
+    * get流程
+      * 计算hash值
+      * 找到对应的位置，根据情况进行：
+      * 直接取值
+      * 红黑树里找值
+      * 遍历链表取值
+      * 返回找到的结果
   
 * 对比JDK1.7和1.8的优缺点（为什么要把1.7的结构改成1.8的结构）
 
