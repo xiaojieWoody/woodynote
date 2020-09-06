@@ -1,0 +1,1583 @@
+# 深入理解Service
+
+## Service存在的意义
+
+* 防止Pod失联（服务发现）
+* 定义一组Pod的访问策略（负载均衡）
+
+```shell
+service只支持四层负载均衡：
+四层：OSI中的传输层，TCP/UDP，四元组，只负责IP数据包转发
+七层：OSI中的应用层，HTTP、FTP、SNMP协议，可以拿到这些协议头部信息，那就可以实现基于协议层面的处理
+```
+
+## Pod与Service的关系
+
+* 通过label-selector相关联
+
+* 通过Service实现Pod的负载均衡（ TCP/UDP 4层）
+
+  ![image-20200906113820213](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906113820213.png)
+
+## Service三种类型
+
+### **ClusterIP**
+
+* 集群内部使用，默认**，**分配一个稳定的IP地址，即VIP，只能在集群内部访问（同Namespace内的Pod）。
+
+  ```shell
+  # 有问题（其他node上curl不通），研究一波
+  [root@k8s-master 8]# kubectl create deployment web --image=lizhenliang/java-demo
+  [root@k8s-master 8]# kubectl expose deployment web --port=80 --target-port=80 --name=web --dry-run -o yaml > service.yaml
+  [root@k8s-master 8]# vi service.yaml
+  [root@k8s-master 8]# kubectl apply -f service.yaml
+  [root@k8s-master ~]# kubectl get svc | grep web
+  web          ClusterIP   10.101.122.161   <none>        80/TCP         62s
+  [root@k8s-master ~]# kubectl get svc  web -o yaml
+  --------------------------------------------------------------------------------------------------------
+  
+  # 没问题
+  [root@k8s-master ~]# kubectl create deployment nginx-1 --image=nginx
+  [root@k8s-master ~]# kubectl expose deployment nginx-1 --port=80 --dry-run -o yaml > service-nginx-1.yaml
+  [root@k8s-master ~]# vi service-nginx-1.yaml
+  [root@k8s-master ~]# kubectl apply -f service-nginx-1.yaml
+  [root@k8s-master ~]# kubectl get svc
+  NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+  nginx-1        ClusterIP   10.99.137.130    <none>        80/TCP         79s
+  # 其他node上能够curl通
+  [root@k8s-node1 ~]# curl 10.99.137.130
+  ```
+
+### **NodePort**
+
+* 对外暴露应用。在每个节点上启用一个端口来暴露服务，可以在集群外部访问。也会分配一个稳定内部集群IP地址。访问地址：<NodeIP>:<NodePort>
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: nginx-1          # pod的标签
+    name: nginx-2           # 本service的名称
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30008        # 指定NodePort的端口
+    selector:
+      app: nginx-1
+    type: NodePort            # 指定NodePort类型
+  ```
+
+  ```shell
+  # kubectl create deployment nginx-1 --image=nginx
+  # kubectl expose deployment nginx-1 --port=80 --type=NodePort
+  [root@k8s-master ~]# kubectl get pods --show-labels
+  NAME                      READY   STATUS    RESTARTS   AGE   LABELS
+  nginx-1-d5c9f69b7-9fgb9   1/1     Running   0          13m   app=nginx-1,pod-template-hash=d5c9f69b7
+  nginx-86c57db685-xc9fz    1/1     Running   0          50m   app=nginx,pod-template-hash=86c57db685
+  web-844f79f54c-kxvwk      1/1     Running   0          31m   app=web,pod-template-hash=844f79f54c
+  
+  [root@k8s-master ~]# kubectl apply -f service-nginx-2.yaml
+  [root@k8s-master ~]# kubectl get svc
+  NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+  nginx-2        NodePort    10.98.53.245     <none>        80:30008/TCP   9s
+  # 每个node都会监听30008端口
+  [root@k8s-node1 ~]# netstat -luntp|grep 30008
+  # 其他node也能curl通
+  [root@k8s-node1 ~]# curl 10.98.53.245
+  # 访问
+  http://NodeIP:30008
+  ```
+
+  ```shell
+  # NodePort访问流程：
+  user -> 域名（公网IP）-> node ip:port -> iptables/ipvs -> pod
+  
+  一般生产环境node都是部署在内网，那30008这个端口怎么让互联网用户访问呢？
+  1、找一台有公网IP的服务器，装一个nginx，反向代理 -> node ip:port
+  2、只用你们外部负载均衡器（Nginx、LVS、HAProxy） -> node ip:port
+  ```
+
+### LoadBalancer
+
+* 对外暴露应用，适用公有云、与NodePort类似，在每个节点上启用一个端口来暴露服务。除此之外，Kubernetes会请求底层云平台上的负载均衡器，将每个Node（[NodeIP]:[NodePort]）作为后端添加进去。
+* 与NodePort类似，在每个节点上启用一个端口来暴露服务。除此之外，Kubernetes会请求底层云平台上的负载均衡器，将每个Node（[NodeIP]:[NodePort]）作为后端添加进去
+
+```shel
+LoadBalancer访问流程：
+user -> 域名（公网IP） -> 公有云上的负载均衡器（自动配置，控制器去完成） -> node ip:port
+```
+
+## Service代理模式
+
+![image-20200906114030947](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906114030947.png)
+
+```shell
+userspace：自己在用户态实现的转发
+iptables：阻断ip通信、端口映射NAT、跟踪包状态、数据包的修改
+ipvs：LVS基于ipvs模块实现的四层负载均衡器，例如阿里云SLB四层LVS FULLNAT，七层Tengine
+
+kube-proxy工作：
+1、实现pod数据包转发
+2、将service相关规则落地实现
+```
+
+### Iptables
+
+- 灵活，功能强大
+
+- 规则遍历匹配和更新，呈线性时延
+
+  ```shell
+  [root@k8s-master ~]# iptables-save
+  [root@k8s-master ~]# iptables-save | grep 30008
+  -A KUBE-NODEPORTS -p tcp -m comment --comment "default/nginx-2:" -m tcp --dport 30008 -j KUBE-MARK-MASQ
+  -A KUBE-NODEPORTS -p tcp -m comment --comment "default/nginx-2:" -m tcp --dport 30008 -j KUBE-SVC-7EYY4BRCF343EG4M
+  [root@k8s-master ~]# iptables-save | grep KUBE-SVC-7EYY4BRCF343EG4M
+  :KUBE-SVC-7EYY4BRCF343EG4M - [0:0]
+  -A KUBE-NODEPORTS -p tcp -m comment --comment "default/nginx-2:" -m tcp --dport 30008 -j KUBE-SVC-7EYY4BRCF343EG4M
+  -A KUBE-SERVICES -d 10.98.53.245/32 -p tcp -m comment --comment "default/nginx-2: cluster IP" -m tcp --dport 80 -j KUBE-SVC-7EYY4BRCF343EG4M
+  -A KUBE-SVC-7EYY4BRCF343EG4M -j KUBE-SEP-SMM2DFHXM6RR56F3
+  
+  # iptables规则：
+  Nodeport -> KUBE-SVC-RRHDV4CFXHW7RWV3 -> KUBE-SEP-XE5XFBDN7LLHNVMO -> -j DNAT --to-destination 10.244.2.2:80
+  clusterip -> KUBE-SVC-RRHDV4CFXHW7RWV3 -> KUBE-SEP-XE5XFBDN7LLHNVMO -> -j DNAT --to-destination 10.244.2.2:80
+  # deployment scale扩容到3个，负载均衡
+  -A KUBE-SVC-RRHDV4CFXHW7RWV3 -m statistic --mode random --probability 0.33332999982 -j KUBE-SEP-BGV4R4Y32WAZO4AD
+  -A KUBE-SVC-RRHDV4CFXHW7RWV3 -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-XE5XFBDN7LLHNVMO
+  -A KUBE-SVC-RRHDV4CFXHW7RWV3 -j KUBE-SEP-CYUFO3BNAYR2R5O3
+  # 上面是转发到3个pod规则，轮训  第一个 30%概率，第二个没选择，第二个50%概率，前两个都没选择，则选择第三个
+  ```
+
+### IPVS
+
+* 工作在内核态，有更好的性能
+
+* 调度算法丰富：rr，wrr，lc，wlc，ip hash...
+
+  ```shell
+  # 启动ipvs
+  [root@k8s-master ~]# modprobe ip_vs
+  [root@k8s-master ~]# lsmod|grep ip_vs
+  ip_vs                 145497  0
+  nf_conntrack          139264  7 ip_vs,nf_nat,nf_nat_ipv4,xt_conntrack,nf_nat_masquerade_ipv4,nf_conntrack_netlink,nf_conntrack_ipv4
+  libcrc32c              12644  4 xfs,ip_vs,nf_nat,nf_conntrack
+  
+  # 每个机器都设置，并设置开机启动
+  [root@k8s-master ~]# lsmod|grep ip_vs
+  [root@k8s-master ~]# modprobe -- ip_vs
+  [root@k8s-master ~]# modprobe -- ip_vs_rr
+  [root@k8s-master ~]# modprobe -- ip_vs_wrr
+  [root@k8s-master ~]# modprobe -- ip_vs_sh
+  [root@k8s-master ~]# modprobe -- nf_conntrack_ipv4
+  # 开机启动
+  vi /etc/rc.local
+  modprobe -- ip_vs
+  modprobe -- ip_vs_rr
+  modprobe -- ip_vs_wrr
+  modprobe -- ip_vs_sh
+  modprobe -- nf_conntrack_ipv4
+  
+  [root@k8s-master ~]# kubectl get cm -n kube-system | grep kube-proxy
+  NAME                                 DATA   AGE
+  kube-proxy                           2      84m
+  # 设置ipvs
+  [root@k8s-master ~]# kubectl edit cm kube-proxy -n kube-system
+  mode: "ipvs"
+  
+  # 重建
+  [root@k8s-master ~]# kubectl get pod -n kube-system -o wide | grep kube-proxy
+  kube-proxy-hjqf2                     1/1     Running   0          86m   192.168.0.43   k8s-node2    <none>           <none>
+  kube-proxy-pljkg                     1/1     Running   0          86m   192.168.0.42   k8s-node1    <none>           <none>
+  kube-proxy-rr89q                     1/1     Running   0          87m   192.168.0.41   k8s-master   <none>           <none>
+  [root@k8s-master ~]# kubectl delete pod kube-proxy-hjqf2 kube-proxy-pljkg kube-proxy-rr89q -n kube-system
+  [root@k8s-node2 ~]# yum install ipvsadm -y
+  [root@k8s-node2 ~]#  ipvsadm -Ln
+  IP Virtual Server version 1.2.1 (size=4096)
+  Prot LocalAddress:Port Scheduler Flags
+    -> RemoteAddress:Port           Forward Weight ActiveConn InActConn
+  TCP  172.17.0.1:30001 rr
+    -> 10.244.1.3:8443              Masq    1      0          0
+  TCP  172.17.0.1:31825 rr
+    -> 10.244.2.2:80                Masq    1      0          0
+  TCP  172.17.0.1:31870 rr
+    -> 10.244.1.5:80                Masq    1      0          0
+  TCP  192.168.0.43:30001 rr
+    -> 10.244.1.3:8443              Masq    1      0          0
+  TCP  192.168.0.43:30008 rr
+    -> 10.244.1.6:80                Masq    1      2          0  
+  
+  # lvs：虚拟服务器，真实服务器
+  ```
+
+## Service DNS名称
+
+```shell
+程序比写死IP更好的方式？
+1、DNS解析
+2、绑定hosts
+名称！
+
+[root@k8s-master ~]# kubectl get pods -n kube-system | grep coredns
+coredns-58cc8c89f4-4w8bm             1/1     Running   0          114m
+coredns-58cc8c89f4-b2lgq             1/1     Running   0          114m
+
+CoreDNS Pod -> 获取service（apiserver）-> 更新到本地 
+
+kubelet运行pod -> pod默认走coredns解析
+
+user -> 域名 -> node ip:80/443 -> ingress controller -> 域名分流 -> pod
+```
+
+```shell
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bs
+  namespace: default
+spec:
+  containers:
+  - name: busybox
+    image: busybox:1.28.4
+    command:
+    - "/bin/sh"
+    - "-c"
+    - "sleep 36000"
+```
+
+```shell
+[root@k8s-master ~]# kubectl apply -f bs.yaml
+
+[root@k8s-master ~]# kubectl get svc
+NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes     ClusterIP   10.96.0.1        <none>        443/TCP        121m
+nginx          NodePort    10.106.251.89    <none>        80:31825/TCP   118m
+nginx-2        NodePort    10.98.53.245     <none>        80:30008/TCP   68m
+web            ClusterIP   10.101.122.161   <none>        80/TCP         109m
+web-nodeport   NodePort    10.98.229.207    <none>        80:31870/TCP   90m
+
+[root@k8s-master ~]# kubectl exec -it bs sh
+/ # nslookup nginx-2
+Server:    10.96.0.10
+Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local
+
+Name:      nginx-2
+Address 1: 10.98.53.245 nginx-2.default.svc.cluster.local
+```
+
+* DNS服务监视Kubernetes API，为每一个Service创建DNS记录用于域名解析。
+* ClusterIP A记录格式：<service-name>.<namespace-name>.svc.cluster.local
+* 示例：my-svc.my-namespace.svc.cluster.local
+
+## 小结
+
+* 采用NodePort对外暴露应用，前面加一个LB实现统一访问入口
+* 优先使用IPVS代理模式
+
+* 集群内应用采用DNS名称访问
+
+# Ingress
+
+## Ingress为弥补NodePort不足而生
+
+* NodePort存在的不足：
+
+  - 一个端口只能一个服务使用，端口需提前规划
+
+  - 只支持4层负载均衡
+
+## Pod与Ingress的关系
+
+* 通过Service相关联
+* 通过Ingress Controller实现Pod的负载均衡
+  - 支持TCP/UDP 4层和HTTP 7层
+
+![image-20200906114312479](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906114312479.png)
+
+## Ingress Controller
+
+* 为了使Ingress资源正常工作，集群必须运行一个Ingress Controller（负载均衡实现）。
+
+* 所以要想通过ingress暴露你的应用，大致分为两步：
+
+  1. 部署Ingress Controller
+
+  2. 创建Ingress规则
+
+* 整体流程如下：
+
+  ![image-20200906114730356](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906114730356.png)
+
+* Ingress Controller有很多实现，我们这里采用官方维护的Nginx控制器。
+* 部署文档：[https](https://github.com/kubernetes/ingress-nginx/blob/master/docs/deploy/index.md)[://](https://github.com/kubernetes/ingress-nginx/blob/master/docs/deploy/index.md)[github.com/kubernetes/ingress-nginx/blob/master/docs/deploy/index.md](https://github.com/kubernetes/ingress-nginx/blob/master/docs/deploy/index.md)
+
+### 注意事项
+
+* 镜像地址修改成国内的：lizhenliang/nginx-ingress-controller:0.20.0 
+
+* 使用宿主机网络：hostNetwork: true
+
+  ```shell
+  user -> 域名 -> node ip:80/443 -> ingress controller -> 域名分流 -> pod
+  
+  [root@k8s-master ~]# kubectl apply -f ingress-controller.yaml
+  [root@k8s-master ~]# kubectl get pods -n ingress-nginx
+  NAME                             READY   STATUS    RESTARTS   AGE
+  nginx-ingress-controller-6k6s8   1/1     Running   0          3m8s
+  nginx-ingress-controller-k7fhv   1/1     Running   0          3m8s
+  ```
+
+* 此时在任意Node上就可以看到该控制监听的80和443端口：
+
+  ```shell
+  # netstat -natp |egrep ":80|:443"
+  tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      104750/nginx: maste 
+  tcp        0      0 0.0.0.0:443             0.0.0.0:*               LISTEN      104750/nginx: maste 
+  ```
+
+* 80和443端口就是接收来自外部访问集群中应用流量，转发对应的Pod上。
+
+### 其他主流控制器
+
+* Traefik： HTTP反向代理、负载均衡工具
+* Istio：服务治理，控制入口流量
+
+##  Ingress
+
+* 接下来，就可以创建ingress规则了。
+  * https://kubernetes.io/zh/docs/concepts/services-networking/ingress/
+
+* 在ingress里有三个必要字段：
+  * host：访问该应用的域名，也就是域名解析
+  * serverName：应用的service名称
+  * serverPort：service端口
+
+### HTTP访问
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: example-ingress
+spec:
+  rules:
+  - host: example.ctnrs.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nginx-2
+          servicePort: 80
+```
+
+```shell
+[root@k8s-master ~]# kubectl get svc
+NAME           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes     ClusterIP   10.96.0.1        <none>        443/TCP        163m
+nginx          NodePort    10.106.251.89    <none>        80:31825/TCP   159m
+nginx-2        NodePort    10.98.53.245     <none>        80:30008/TCP   110m
+web            ClusterIP   10.101.122.161   <none>        80/TCP         151m
+web-nodeport   NodePort    10.98.229.207    <none>        80:31870/TCP   132m
+
+[root@k8s-master ~]# kubectl apply -f ingress.yaml
+[root@k8s-master ~]# kubectl get ingress
+NAME              HOSTS               ADDRESS   PORTS   AGE
+example-ingress   example.ctnrs.com             80      27s
+# 访问，404
+https://192.168.0.42/
+# 暂时（windows/mac） host解析  非master（41）上
+192.168.0.42 example2.ctnrs.com blog.ctnrs.com example.ctnrs.com java.ctnrs.com php.ctnrs.com
+192.168.0.43 eureka.ctnrs.com gateway.ctnrs.com portal.ctnrs.com
+192.168.0.43 grafana.ctnrs.com kiali.ctnrs.com tracing.ctnrs.com httpbin.ctnrs.com bookinfo.ctnrs.com
+# 验证下
+/Users/dingyuanjie [dingyuanjie@V_VYJIDING-MB0] [18:29]
+> ping example.ctnrs.com
+# 访问，正常
+http://example.ctnrs.com/
+```
+
+* 生产环境：example.ctnrs.com 域名是在你购买域名的运营商上进行解析，A记录值为K8S Node的公网IP（该Node必须运行了Ingress controller）。
+
+* 测试环境：可以绑定hosts模拟域名解析（"C:\Windows\System32\drivers\etc\hosts"），对应IP是K8S Node的内网IP。例如：
+
+* 192.168.31.62 example.ctnrs.com
+
+### HTTPS访问
+
+```yaml
+# ingress-https.yaml
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: tls-example-ingress
+spec:
+  tls:
+  - hosts:
+    - blog.ctnrs.com
+    secretName: example-ctnrs-com
+  rules:
+    - host: blog.ctnrs.com
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: nginx-2
+            servicePort: 80
+```
+
+* 里面用到了secret名为secret-tls，用于保存https证书
+
+* 这里使用cfssl工具自签证书用于测试，先下载cfssl工具
+
+  ```shell
+  # master
+  curl -s -L -o /usr/local/bin/cfssl https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
+  curl -s -L -o /usr/local/bin/cfssljson https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+  curl -s -L -o /usr/local/bin/cfssl-certinfo https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64
+  chmod +x /usr/local/bin/cfssl*
+  ```
+
+* 执行命令，生成证书：
+
+  ```shell
+  [root@k8s-master ~]# mkdir cert
+  [root@k8s-master ~]# cd cert/
+  
+  cat > ca-config.json <<EOF
+  {
+    "signing": {
+      "default": {
+        "expiry": "87600h"
+      },
+      "profiles": {
+        "kubernetes": {
+           "expiry": "87600h",
+           "usages": [
+              "signing",
+              "key encipherment",
+              "server auth",
+              "client auth"
+          ]
+        }
+      }
+    }
+  }
+  EOF
+  
+  cat > ca-csr.json <<EOF
+  {
+      "CN": "kubernetes",
+      "key": {
+          "algo": "rsa",
+          "size": 2048
+      },
+      "names": [
+          {
+              "C": "CN",
+              "L": "Beijing",
+              "ST": "Beijing"
+          }
+      ]
+  }
+  EOF
+  
+  cfssl gencert -initca ca-csr.json | cfssljson -bare ca -
+  
+  # 具体域名根据实际情况进行修改
+  cat > blog.ctnrs.com-csr.json <<EOF
+  {
+    "CN": "blog.ctnrs.com",
+    "hosts": [],
+    "key": {
+      "algo": "rsa",
+      "size": 2048
+    },
+    "names": [
+      {
+        "C": "CN",
+        "L": "BeiJing",
+        "ST": "BeiJing"
+      }
+    ]
+  }
+  EOF
+  
+  cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes blog.ctnrs.com-csr.json | cfssljson -bare blog.ctnrs.com 
+  
+  # 将证书保存在secret里
+  # 这样，ingress就能通过secret名称拿到要用的证书了
+  kubectl create secret tls blog-ctnrs-com --cert=blog.ctnrs.com.pem --key=blog.ctnrs.com-key.pem
+  
+  [root@k8s-master cert]# ls *pem
+  blog.ctnrs.com-key.pem  blog.ctnrs.com.pem  ca-key.pem  ca.pem
+  
+  [root@k8s-master ~]#  kubectl apply -f ingress-https.yaml
+  [root@k8s-master ~]# kubectl get ing
+  NAME                  HOSTS               ADDRESS   PORTS     AGE
+  example-ingress       example.ctnrs.com             80        63m
+  tls-example-ingress   blog.ctnrs.com                80, 443   17s
+  
+  # 然后绑定本地hosts，就可以https访问了：https://example-ctnrs-com
+  
+  /Users/dingyuanjie [dingyuanjie@V_VYJIDING-MB0] [19:27]
+  > ping blog.ctnrs.com
+  
+  # 访问
+  https://blog.ctnrs.com/
+  ```
+
+### 根据URL路由到多个服务
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: url-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: foobar.ctnrs.com
+    http:
+      paths:
+      - path: /foo
+        backend:
+          serviceName: service1
+          servicePort: 80
+  - host: foobar.ctnrs.com
+    http:
+      paths:
+      - path: /bar
+        backend:
+          serviceName: service2
+          servicePort: 80
+```
+
+```shell
+网站
+www.ctnrs.com/a  北京地区
+www.ctnrs.com/b  上海地区
+
+在nginx怎么实现？
+
+location /a {
+	proxy_pass ;
+}
+
+location /b {
+	proxy_pass http://xxx:80;
+
+}
+
+[root@k8s-master ~]# kubectl create deployment web1 --image=tomcat
+[root@k8s-master ~]# kubectl create deployment web2 --image=lizhenliang/java-demo
+[root@k8s-master ~]# kubectl expose deployment web1 --port=8080
+[root@k8s-master ~]# kubectl expose deployment web2 --port=8080
+[root@k8s-master ~]# kubectl get svc,pod
+NAME                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+service/web1           ClusterIP   10.97.225.72     <none>        80/TCP         3m42s
+service/web2           ClusterIP   10.107.139.249   <none>        80/TCP         3m38s
+
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/web1-566fd7bf5b-dxrg5     1/1     Running   0          4m23s
+pod/web2-5fcfcd6769-mstnb     1/1     Running   0          4m2s
+
+[root@k8s-master ~]# kubectl exec -it web1-566fd7bf5b-dxrg5 bash
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat# cd webapps
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps# mkdir ROOT
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps# cd ROOT/
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps/ROOT# echo "Hello" > index.html
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps/ROOT# exit
+
+# 都能访问
+[root@k8s-master ~]# curl 10.97.225.72
+[root@k8s-master ~]# curl 10.107.139.249
+```
+
+```yaml
+# ingress-v.yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: example-ingress
+spec:
+  rules:
+  - host: example.ctnrs.com
+    http:
+      paths:
+      - path: /a
+        backend:
+          serviceName: web1
+          servicePort: 80
+  - host: example.ctnrs.com
+    http:
+      paths:
+      - path: /b
+        backend:
+          serviceName: web2
+          servicePort: 80
+```
+
+```shell
+[root@k8s-master ~]# kubectl apply -f ingress-v.yaml
+[root@k8s-master ~]# kubectl get ep
+NAME           ENDPOINTS           AGE
+web1           10.244.1.7:8080     80m
+web2           10.244.1.8:8080     80m
+
+[root@k8s-master ~]# kubectl get pods
+NAME                      READY   STATUS    RESTARTS   AGE
+web1-566fd7bf5b-dxrg5     1/1     Running   0          85m
+web2-5fcfcd6769-mstnb     1/1     Running   0          85m
+[root@k8s-master ~]# kubectl exec -it web1-566fd7bf5b-dxrg5 bash
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat# cd webapps
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps# mkdir a
+root@web1-566fd7bf5b-dxrg5:/usr/local/tomcat/webapps# echo "Hello web1" > a/index.html
+# 访问
+http://example.ctnrs.com/a
+http://example.ctnrs.com/b
+```
+
+* 工作流程
+
+  ```shell
+  foobar.ctnrs.com -> 178.91.123.132 -> / foo    service1:80
+                                        / bar    service2:80
+  ```
+
+### 基于名称的虚拟主机
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: name-virtual-host-ingress
+spec:
+  rules:
+  - host: foo.ctnrs.com
+    http:
+      paths:
+      - backend:
+          serviceName: service1
+          servicePort: 80
+  - host: bar.ctnrs.com
+    http:
+      paths:
+      - backend:
+          serviceName: service2
+          servicePort: 80
+```
+
+* 工作流程：
+
+```shell
+foo.bar.com --|                 |-> service1:80
+              | 178.91.123.132  |
+bar.foo.com --|                 |-> service2:80
+```
+
+## Annotations对Ingress个性化配置
+
+* 参考文档 ：https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md
+
+* **HTTP：配置Nginx常用参数**
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1beta1
+  kind: Ingress
+  metadata:
+    name: example-ingress
+    annotations:
+       kubernetes.io/ingress.class: "nginx“
+       nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+       nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+       nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+       nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  spec:
+    rules:
+    - host: example.ctnrs.com
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: web
+            servicePort: 80
+  ```
+
+* **HTTPS：禁止访问HTTP强制跳转到HTTPS（默认开启）**
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1beta1
+  kind: Ingress
+  metadata:
+    name: tls-example-ingress
+    annotations:
+      kubernetes.io/ingress.class: "nginx“
+      nginx.ingress.kubernetes.io/ssl-redirect: 'false'
+  spec:
+    tls:
+    - hosts:
+      - sslexample.ctnrs.com
+      secretName: secret-tls
+    rules:
+      - host: sslexample.ctnrs.com
+        http:
+          paths:
+          - path: /
+            backend:
+              serviceName: web
+              servicePort: 80
+  ```
+
+```shell
+ingress controller pod -> 获取service（apiserver）-> 应用到本地nginx
+
+1、控制器获取service关联的pod应用到nginx
+2、nginx 提供七层负载均衡
+```
+
+## Ingress Controller高可用方案
+
+* 如果域名只解析到一台Ingress controller，是存在单点的，挂了就不能提供服务了。这就需要具备高可用，有两种常见方案：
+
+  ![image-20200906210514125](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906210514125.png)
+
+  ```shell
+  1、固定ingress controller到两个node上（daemonset+nodeselector）
+      user -> 域名 -> vip(keepalived) ha -> pod
+  
+  2、固定ingress controller到两个node上（daemonset+nodeselector）
+      user -> 域名 -> LB（nginx、lvs、haproxy） -> ingress controller -> pod
+  # nginx
+  ## 另外找个节点node（192.168.0.44），安装nginx，配置，upstream
+  vi /etc/nginx/nginx.conf
+  upstream ingress-controller {
+  	server 192.168.0.42;
+  	server 192.168.0.43;
+  }
+  
+  location / {
+  	proxy_pass http://ingress-controller;
+  	proxy_set_header Host $host;
+  }
+  ## windows/mac的hosts上配置192.168.0.44 example.ctnrs.com
+  ## 浏览器上访问example.ctnrs.com
+  ```
+
+* **左边：双机热备**，选择两台Node专门跑Ingress controller，然后通过keepalived对其做主备。用户通过VIP访问
+
+* **右边：高可用集群（推荐）**，前面加一个负载均衡器，转发请求到后端多台Ingress controller
+
+# 管理应用程序配置
+
+## secret
+
+* secret加密数据并存放Etcd中，让Pod的容器以挂载Volume方式访问
+
+* 应用场景：凭据
+
+  ```shell
+  secret应用场景：
+  1、https证书
+  2、secret存放docker registry认证信息
+  3、存放文件内容或者字符串，例如用户名密码
+  ```
+
+* Pod使用secret两种方式：
+
+  - 变量注入
+  - 挂载
+
+* 例如：创建一个secret用于保存应用程序用到的用户名和密码
+
+  ```shell
+  echo -n 'admin' | base64
+  YWRtaW4=
+  echo -n '1f2d1e2e67df' | base64
+  MWYyZDFlMmU2N2Rm
+  ```
+
+* 创建secret：
+
+  ```yaml
+  # secret.yaml
+  
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: mysecret
+  type: Opaque
+  data:
+    username: YWRtaW4=
+    password: MWYyZDFlMmU2N2Rm  
+  ```
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f secret.yaml
+  [root@k8s-master ~]# kubectl get secret
+  NAME                  TYPE                                  DATA   AGE
+  blog-ctnrs-com        kubernetes.io/tls                     2      163m
+  default-token-26w7l   kubernetes.io/service-account-token   3      6h7m
+  mysecret              Opaque                                2      7s
+  ```
+
+* 变量注入方式在Pod中使用secret：
+
+  ```yaml
+  # secret-var-pod.yaml
+  
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: mypod
+  spec:
+    containers:
+    - name: nginx
+      image: nginx
+      env:
+        - name: SECRET_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: username
+        - name: SECRET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: password
+  ```
+
+* 进入到Pod中测试是否传入变量：
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f secret-var-pod.yaml
+  [root@k8s-master ~]# kubectl exec -it mypod bash
+  root@mypod:/# echo $SECRET_USERNAME
+  admin
+  root@mypod:/# echo $SECRET_PASSWORD
+  1f2d1e2e67df
+  ```
+
+* 数据挂载方式在Pod中使用secret：
+
+  ```yaml
+  # secret-volume-pod.yaml
+  
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: mypod-volume
+  spec:
+    containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+      - name: foo
+        mountPath: "/etc/foo"
+        readOnly: true
+    volumes:
+    - name: foo
+      secret:
+        secretName: mysecret
+  ```
+
+* 进入到Pod中测试是否写入文件：
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f secret-volume-pod.yaml
+  [root@k8s-master ~]# kubectl exec -it mypod-volume bash
+  root@mypod-volume:/# cat /etc/foo/username
+  admin
+  root@mypod-volume:/# cat /etc/foo/password
+  1f2d1e2e67df
+  ```
+
+* 如果你的应用程序使用secret，应遵循Pod获取该数据的方式
+
+## configmap
+
+* 与Secret类似，区别在于ConfigMap保存的是不需要加密配置信息。
+
+* 应用场景：应用配置
+
+* 例如：创建一个configmap用于保存应用程序用到的字段值
+
+  ```yaml
+  # configmap-var.yaml
+  
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: myconfig
+    namespace: default
+  data:
+    special.level: info
+    special.type: hello
+  ```
+
+* 变量注入方式在Pod中使用configmap：
+
+  ```yaml
+  # configmap-var-pod.yaml
+  
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: mypod-cm
+  spec:
+    containers:
+      - name: busybox
+        image: busybox
+        command: [ "/bin/sh", "-c", "echo $(LEVEL) $(TYPE)" ]
+        env:
+          - name: LEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: myconfig
+                key: special.level
+          - name: TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: myconfig
+                key: special.type
+    restartPolicy: Never
+  ```
+
+* 查看Pod日志就可以看到容器里打印的键值了：
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f configmap-var.yaml
+  [root@k8s-master ~]# kubectl apply -f configmap-var-pod.yaml
+  [root@k8s-master ~]# kubectl get pods
+  [root@k8s-master ~]# kubectl logs mypod-cm
+  info hello
+  ```
+
+* 举一个常见的用法，例如将应用程序的配置文件保存到configmap中，这里以redis为例：
+
+  ```yaml
+  # configmap-var-redis.yaml 
+  
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: redis-config
+  data:
+    redis.properties: |
+      redis.host=127.0.0.1
+      redis.port=6379
+      redis.password=123456
+  ---
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: mypod-redis
+  spec:
+    containers:
+      - name: busybox
+        image: busybox
+        command: [ "/bin/sh","-c","cat /etc/config/redis.properties" ]
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+    volumes:
+      - name: config-volume
+        configMap:
+          name: redis-config
+    restartPolicy: Never
+  ```
+
+* 查看Pod日志就可以看到容器里打印的文件了：
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f configmap-var-redis.yaml
+  [root@k8s-master ~]# kubectl logs mypod-redis
+  redis.host=127.0.0.1
+  redis.port=6379
+  redis.password=123456
+  ```
+
+## 应用程序如何动态更新配置？
+
+* ConfigMap更新时，业务也随之更新的方案：
+
+  - 当ConfigMap发生变更时，应用程序动态加载
+  - 触发滚动更新，即重启服务
+
+```shell
+configmap怎么动态让应用生效？
+1、重建pod
+2、应用程序本身实现监听本地配置文件，如果发生变化触发配置热更新
+3、使用sidecar容器监听配置文件是否更新，如果发生变化触发socket、http通知应用热更新
+
+采用配置中心，例如nacos、apollo
+```
+
+# **Pod 数据持久化**
+
+* **（数据卷与数据持久化卷）**
+* 参考文档：https://kubernetes.io/docs/concepts/storage/volumes/
+
+  - Kubernetes中的Volume提供了在容器中挂载外部存储的能力
+  - Pod需要设置卷来源（spec.volume）和挂载点（spec.containers.volumeMounts）两个信息后才可以使用相应的Volume
+
+```shell
+本地卷：hostPath，emptyDir
+网络卷：nfs，ceph（cephfs，rbd），glusterfs
+公有云：aws，azure
+k8s资源：downwardAPI，configMap，secret
+```
+
+## emptyDir
+
+* 创建一个空卷，挂载到Pod中的容器。Pod删除该卷也会被删除。
+
+* 应用场景：Pod中容器之间数据共享
+
+  ```yaml
+  # emptydir.yaml
+  
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: my-pod-emp
+  spec:
+    containers:
+    - name: write
+      image: centos
+      command: ["bash","-c","for i in {1..100};do echo $i >> /data/hello;sleep 1;done"]
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  
+    - name: read
+      image: centos
+      command: ["bash","-c","tail -f /data/hello"]
+      volumeMounts:
+        - name: data
+          mountPath: /data
+    
+    volumes:
+    - name: data
+      emptyDir: {}    
+  ```
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f emptydir.yaml
+  [root@k8s-master ~]# kubectl get pods -o wide
+  [root@k8s-master ~]# kubectl logs my-pod-emp -c read -f
+  # docker ps 查看容器名，找到对应POD ID
+  # /var/lib/kubelet/pods/<POD ID>/volumes/kubernetes.io~empty-dir/data
+  [root@k8s-node1 ~]# docker ps | grep write
+  [root@k8s-node1 ~]# cat /var/lib/kubelet/pods/81b18f11-cc2c-4a76-88fb-9010a9c26d6e/volumes/kubernetes.io~empty-dir/data/hello
+  ```
+
+## hostPath
+
+```shell
+emptyDir == volume       
+hostPath == bindmount    日志采集agent、监控agent  /proc
+```
+
+* 挂载Node文件系统上文件或者目录到Pod中的容器。
+
+* 应用场景：Pod中容器需要访问宿主机文件
+
+  ```yaml
+  # hostpath.yaml
+  
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: my-pod
+  spec:
+    containers:
+    - name: busybox
+      image: busybox
+      args:
+      - /bin/sh
+      - -c
+      - sleep 36000
+      volumeMounts:
+      - name: data
+        mountPath: /data
+    volumes:
+    - name: data
+      hostPath:
+        path: /tmp
+        type: Directory
+        
+  [root@k8s-master ~]# kubectl exec -it my-pod-hostpath sh      
+  ```
+
+* 验证：进入Pod中的/data目录内容与当前运行Pod的节点内容一样
+
+# 15 1:05:00
+
+## 网络存储
+
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - name: wwwroot
+          mountPath: /usr/share/nginx/html
+        ports:
+        - containerPort: 80
+      volumes:
+      - name: wwwroot
+        nfs:
+          server: 192.168.0.200
+          path: /data/nfs
+```
+
+## PV&PVC
+
+* **PersistentVolume（PV）：**对存储资源创建和使用的抽象，使得存储作为集群中的资源管理
+
+* PV供给分为：
+
+  - 静态
+  - 动态
+
+* **PersistentVolumeClaim（PVC）：**让用户不需要关心具体的Volume实现细节
+
+  ![image-20200906223111824](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906223111824.png)
+
+## PV静态供给
+
+* 静态供给是指提前创建好很多个PV，以供使用
+
+  ![image-20200906223151667](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906223151667.png)
+
+* 先准备一台NFS服务器作为测试
+
+  ```shell
+  # yum install nfs-utils
+  # vi /etc/exports
+  /ifs/kubernetes *(rw,no_root_squash)
+  # mkdir -p /ifs/kubernetes
+  # systemctl start nfs
+  # systemctl enable nfs
+  ```
+
+* 并且要在每个Node上安装nfs-utils包，用于mount挂载时用。
+
+* 示例：先准备三个PV，分别是5G，10G，20G，修改下面对应值分别创建
+
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: pv001       # 修改PV名称
+  spec:
+    capacity:
+      storage: 30Gi   # 修改大小
+    accessModes:
+      - ReadWriteMany
+    nfs:
+      path: /opt/nfs/pv001   # 修改目录名
+      server: 192.168.31.62
+  ```
+
+* 创建一个Pod使用PV：
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: my-pod
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: www
+            mountPath: /usr/share/nginx/html
+    volumes:
+      - name: www
+        persistentVolumeClaim:
+          claimName: my-pvc
+  
+  ---
+  
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: my-pvc
+  spec:
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 5Gi
+  ```
+
+* 创建并查看PV与PVC状态：
+
+  ```shell
+  # kubectl apply -f pod-pv.yaml
+  # kubectl get pv,pvc
+  ```
+
+* 会发现该PVC会与5G PV进行绑定成功。
+
+* 然后进入到容器中/usr/share/nginx/html（PV挂载目录）目录下创建一个文件测试：
+
+  ```shell
+  kubectl exec -it my-pod bash
+  cd /usr/share/nginx/html
+  echo "123" index.html
+  ```
+
+* 再切换到NFS服务器，会发现也有刚在容器创建的文件，说明工作正常
+
+  ```shell
+  cd /opt/nfs/pv001
+  ls
+  index.html
+  ```
+
+* 如果创建一个PVC为16G，你猜会匹配到哪个PV呢？
+
+* [https://](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)[kubernetes.io/docs/concepts/storage/persistent-volumes/](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+
+## PV动态供给
+
+![image-20200906224150695](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906224150695.png)
+
+* Dynamic Provisioning机制工作的核心在于StorageClass的API对象。
+* StorageClass声明存储插件，用于自动创建PV。
+* Kubernetes支持动态供给的存储插件：
+
+* [https://](https://kubernetes.io/docs/concepts/storage/storage-classes/)[kubernetes.io/docs/concepts/storage/storage-classes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
+
+## PV动态供给实践（NFS）
+
+![image-20200906224249472](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906224249472.png)
+
+* 由于K8S不支持NFS动态供给，还需要先安装上图中的nfs-client-provisioner插件：
+
+  ```shell
+  # cd nfs-client
+  # vi deployment.yaml # 修改里面NFS地址和共享目录为你的
+  # kubectl apply -f .
+  # kubectl get pods
+  NAME                                     READY   STATUS    RESTARTS   AGE
+  nfs-client-provisioner-df88f57df-bv8h7   1/1     Running   0          49m
+  ```
+
+* 测试：
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: my-pod
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: www
+            mountPath: /usr/share/nginx/html
+    volumes:
+      - name: www
+        persistentVolumeClaim:
+          claimName: my-pvc
+  
+  ---
+  
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: my-pvc
+  spec:
+    storageClassName: "managed-nfs-storage"
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 5Gi
+  ```
+
+* 这次会自动创建5GPV并与PVC绑定
+
+  ```shell
+  kubectl get pv,pvc
+  ```
+
+* 测试方法同上，进入到容器中/usr/share/nginx/html（PV挂载目录）目录下创建一个文件测试。
+
+* 再切换到NFS服务器，会发现下面目录，该目录是自动创建的PV挂载点。进入到目录会发现刚在容器创建的文件
+
+  ```shell
+  # ls /opt/nfs/
+  default-my-pvc-pvc-51cce4ed-f62d-437d-8c72-160027cba5ba
+  ```
+
+# **再谈有状态应用部署：StatefulSet**
+
+## StatefulSet控制器概述
+
+* StatefulSet：
+
+  - 部署有状态应用
+  - 解决Pod独立生命周期，保持Pod启动顺序和唯一性
+
+1. 稳定，唯一的网络标识符，持久存储
+2. 有序，优雅的部署和扩展、删除和终止
+3. 有序，滚动更新
+
+* 应用场景：数据库
+
+## 稳定的网络ID
+
+* 说起StatefulSet稳定的网络标识符，不得不从Headless说起了。
+
+* 标准Service：
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: my-service
+  spec:
+    selector:
+      app: nginx 
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 9376
+  ```
+
+* 无头Service（Headless Service）：
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: my-service
+  spec:
+    clusterIP: None
+    selector:
+      app: nginx 
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 9376
+  ```
+
+* 标准Service与无头Service区别是clusterIP: None，这表示创建Service不要为我（Headless Service）分配Cluster IP，因为我不需要
+
+* 为什么标准Service需要？
+
+* 这就是无状态和有状态的控制器设计理念了，无状态的应用Pod是完全对等的，提供相同的服务，可以在飘移在任意节点，例如Web。而像一些分布式应用程序，例如zookeeper集群、etcd集群、mysql主从，每个实例都会维护着一种状态，每个实例都各自的数据，并且每个实例之间必须有固定的访问地址（组建集群），这就是有状态应用。所以有状态应用是不能像无状态应用那样，创建一个标准Service，然后访问ClusterIP负载均衡到一组Pod上。这也是为什么无头Service不需要ClusterIP的原因，它要的是能为每个Pod固定一个”身份“。
+
+* 举例说明：
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: headless-svc
+  spec:
+    clusterIP: None
+    selector:
+      app: nginx 
+    ports:
+      - protocol: TCP
+        port: 80
+        targetPort: 80
+  
+  ---
+  
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: web
+  spec:
+    selector:
+      matchLabels:
+        app: nginx 
+    serviceName: "headless-svc"
+    replicas: 3 
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx 
+          ports:
+          - containerPort: 80
+            name: web
+  ```
+
+* 相比之前讲的yaml，这次多了一个serviceName: “nginx”字段，这就告诉StatefulSet控制器要使用nginx这个headless service来保证Pod的身份。
+
+  ```shell
+  # kubectl get pods
+  NAME                                     READY   STATUS    RESTARTS   AGE
+  my-pod                                   1/1     Running   0          7h50m
+  nfs-client-provisioner-df88f57df-bv8h7   1/1     Running   0          7h54m
+  web-0                                    1/1     Running   0          6h55m
+  web-1                                    1/1     Running   0          6h55m
+  web-2                                    1/1     Running   0          6h55m
+  NAME                   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+  service/headless-svc   ClusterIP   None           <none>        80/TCP         7h15m
+  service/kubernetes     ClusterIP   10.1.0.1       <none>        443/TCP        8d
+  ```
+
+* 临时创建一个Pod，测试DNS解析：
+
+  ```shell
+  # kubectl run -i --tty --image busybox:1.28.4 dns-test --restart=Never --rm /bin/sh
+  If you don't see a command prompt, try pressing enter.
+  / # nslookup nginx.default.svc.cluster.local
+  Server:    10.0.0.2
+  Address 1: 10.0.0.2 kube-dns.kube-system.svc.cluster.local
+   
+  Name:      nginx.default.svc.cluster.local
+  Address 1: 172.17.26.3 web-1.nginx.default.svc.cluster.local
+  Address 2: 172.17.26.4 web-2.nginx.default.svc.cluster.local
+  Address 3: 172.17.83.3 web-0.nginx.default.svc.cluster.local
+  ```
+
+* 结果得出该Headless Service代理的所有Pod的IP地址和Pod 的DNS A记录。
+
+* 通过访问web-0.nginx的Pod的DNS名称时，可以解析到对应Pod的IP地址，其他Pod 的DNS名称也是如此，这个DNS名称就是固定身份，在生命周期不会再变化：
+
+  ```shell
+  / # nslookup web-0.nginx.default.svc.cluster.local
+  Server:    10.0.0.2
+  Address 1: 10.0.0.2 kube-dns.kube-system.svc.cluster.local
+  
+  Name:      web-0.nginx.default.svc.cluster.local
+  Address 1: 172.17.83.3 web-0.nginx.default.svc.cluster.local 
+  ```
+
+* 进入容器查看它们的主机名：
+
+  ```shell
+  [root@k8s-master01 ~]# kubectl exec web-0 hostname
+  web-0
+  [root@k8s-master01 ~]# kubectl exec web-1 hostname
+  web-1
+  [root@k8s-master01 ~]# kubectl exec web-2 hostname
+  web-2
+  ```
+
+* 可以看到，每个Pod都从StatefulSet的名称和Pod的序号中获取主机名的。
+
+* 不过，相信你也已经注意到了，尽管 web-0.nginx 这条记录本身不会变，但它解析到的 Pod 的 IP 地址，并不是固定的。这就意味着，对于“有状态应用”实例的访问，你必须使用 DNS 记录或者 hostname 的方式，而绝不应该直接访问这些 Pod 的 IP 地址。
+
+* 以下是Cluster Domain，Service name，StatefulSet名称以及它们如何影响StatefulSet的Pod的DNS名称的一些选择示例。
+
+  | Cluster   Domain | Service   (ns/name) | StatefulSet   (ns/name) | StatefulSet   Domain            | Pod   DNS                                    | Pod   Hostname |
+  | ---------------- | ------------------- | ----------------------- | ------------------------------- | -------------------------------------------- | -------------- |
+  | cluster.local    | default/nginx       | default/web             | nginx.default.svc.cluster.local | web-{0..N-1}.nginx.default.svc.cluster.local | web-{0..N-1}   |
+  | cluster.local    | foo/nginx           | foo/web                 | nginx.foo.svc.cluster.local     | web-{0..N-1}.nginx.foo.svc.cluster.local     | web-{0..N-1}   |
+  | kube.local       | foo/nginx           | foo/web                 | nginx.foo.svc.kube.local        | web-{0..N-1}.nginx.foo.svc.kube.local        | web-{0..N-1}   |
+
+## 稳定的存储
+
+* StatefulSet的存储卷使用VolumeClaimTemplate创建，称为卷申请模板，当StatefulSet使用VolumeClaimTemplate 创建一个PersistentVolume时，同样也会为每个Pod分配并创建一个编号的PVC
+
+* 示例：
+
+  ```yaml
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: web
+  spec:
+    selector:
+      matchLabels:
+        app: nginx 
+    serviceName: "headless-svc"
+    replicas: 3 
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx 
+          ports:
+          - containerPort: 80
+            name: web
+          volumeMounts:
+          - name: www
+            mountPath: /usr/share/nginx/html
+    volumeClaimTemplates:
+    - metadata:
+        name: www
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "managed-nfs-storage"
+        resources:
+          requests:
+            storage: 1Gi
+  ```
+
+  ```shell
+  # kubectl get pv,pvc
+  NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM               STORAGECLASS          REASON   AGE
+  persistentvolume/pv001                                      5Gi        RWX            Retain           Released    default/my-pvc                                     8h
+  persistentvolume/pv002                                      10Gi       RWX            Retain           Available                                                      8h
+  persistentvolume/pv003                                      30Gi       RWX            Retain           Available                                                      8h
+  persistentvolume/pvc-2c5070ff-bcd1-4703-a8dd-ac9b601bf59d   1Gi        RWO            Delete           Bound       default/www-web-0   managed-nfs-storage            6h58m
+  persistentvolume/pvc-46fd1715-181a-4041-9e93-fa73d99a1b48   1Gi        RWO            Delete           Bound       default/www-web-2   managed-nfs-storage            6h58m
+  persistentvolume/pvc-c82ae40f-07c5-45d7-a62b-b129a6a011ae   1Gi        RWO            Delete           Bound       default/www-web-1   managed-nfs-storage            6h58m
+  
+  NAME                              STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS          AGE
+  persistentvolumeclaim/www-web-0   Bound    pvc-2c5070ff-bcd1-4703-a8dd-ac9b601bf59d   1Gi        RWO            managed-nfs-storage   6h58m
+  persistentvolumeclaim/www-web-1   Bound    pvc-c82ae40f-07c5-45d7-a62b-b129a6a011ae   1Gi        RWO            managed-nfs-storage   6h58m
+  persistentvolumeclaim/www-web-2   Bound    pvc-46fd1715-181a-4041-9e93-fa73d99a1b48   1Gi        RWO            managed-nfs-storage   6h58m
+  ```
+
+* 结果得知，StatefulSet为每个Pod分配专属的PVC及编号。每个PVC绑定对应的 PV，从而保证每一个 Pod 都拥有一个独立的 Volume。
+* 在这种情况下，删除Pods或StatefulSet时，它所对应的PVC和PV不会被删除。所以，当这个Pod被重新创建出现之后，Kubernetes会为它找到同样编号的PVC，挂载这个PVC对应的Volume，从而获取到以前保存在 Volume 里的数据
+
+## 小结
+
+* StatefulSet与Deployment区别：有身份的！
+* 身份三要素：
+  - 域名
+  - 主机名
+  - 存储（PVC）
+
+* 这里为你准备了一个etcd集群，来感受下有状态部署： https://github.com/lizhenliang/k8s-statefulset/tree/master/etcd 
+
+# **Kubernetes 鉴权框架与用户权限分配**
+
+## Kubernetes的安全框架
+
+## 传输安全，认证，授权，准入控制
+
+## 使用RBAC授权
+
+# **部署PHP/Java网站，在实际项目中应用**
+

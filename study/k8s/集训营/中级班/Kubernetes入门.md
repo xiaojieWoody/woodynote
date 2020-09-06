@@ -170,15 +170,15 @@ $ systemctl disable firewalld
 $ sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
 $ setenforce 0  # 临时
 
-192.168.0.31	hostnamectl set-hostname k8s-master bash
-192.168.0.32	hostnamectl set-hostname k8s-node1 bash
-192.168.0.34	hostnamectl set-hostname k8s-node2 bash
+192.168.0.41	hostnamectl set-hostname k8s-master bash
+192.168.0.42	hostnamectl set-hostname k8s-node1 bash
+192.168.0.43	hostnamectl set-hostname k8s-node2 bash
 
 # 在master添加hosts：
 cat >> /etc/hosts << EOF
-192.168.0.31 k8s-master
-192.168.0.32 k8s-node1
-192.168.0.34 k8s-node2
+192.168.0.41 k8s-master
+192.168.0.42 k8s-node1
+192.168.0.43 k8s-node2
 EOF
 
 # 将桥接的IPv4流量传递到iptables的链：
@@ -256,7 +256,7 @@ $ kubeadm join <Master节点的IP和端口 >
   ```shell
   # master
   kubeadm init \
-    --apiserver-advertise-address=192.168.0.31 \
+    --apiserver-advertise-address=192.168.0.41 \
     --image-repository registry.aliyuncs.com/google_containers \
     --kubernetes-version v1.17.0 \
     --service-cidr=10.96.0.0/12 \
@@ -269,11 +269,7 @@ $ kubeadm join <Master节点的IP和端口 >
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
   
   # 连接集群的文件
-  cat /etc/kubernetes/admin.conf
-  
-  # node上执行，加入master集群
-  kubeadm join 192.168.0.31:6443 --token ts6zfd.7qbqx1zfgfcf3tt3 \
-      --discovery-token-ca-cert-hash sha256:af8ea1ef58a7568017014c95fb705f4e6e332c48168418665252ea266c43215c
+  cat /etc/kubernetes/admin.conf    
   ```
 
   ```shell
@@ -313,8 +309,8 @@ $ kubeadm join <Master节点的IP和端口 >
   ```shell
   # node
   # 向集群添加新节点，执行在kubeadm init输出的kubeadm join命令
-  kubeadm join 192.168.31.61:6443 --token esce21.q6hetwm8si29qxwn \
-      --discovery-token-ca-cert-hash sha256:00603a05805807501d7181c3d60b478788408cfe6cedefedb1f97569708be9c5
+  kubeadm join 192.168.0.41:6443 --token lnywnu.lyiloexmhyd6yxee \
+      --discovery-token-ca-cert-hash sha256:65461da4a56a285b825d1aa9728bb308ffb58f4d6d7ac4eb83f07e32e8dbd8a1
       
   [root@k8s-master ~]# kubectl get nodes
   NAME         STATUS   ROLES    AGE   VERSION
@@ -344,9 +340,14 @@ $ kubeadm join <Master节点的IP和端口 >
   # 在Kubernetes集群中创建一个pod，验证是否正常运行：
   $ kubectl create deployment nginx --image=nginx
   $ kubectl expose deployment nginx --port=80 --type=NodePort
-  $ kubectl get pod,svc
+  [root@k8s-master ~]# kubectl get pod,svc
+  NAME                         READY   STATUS    RESTARTS   AGE
+  pod/nginx-86c57db685-xc9fz   1/1     Running   0          68s
+  NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+  service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        4m44s
+  service/nginx        NodePort    10.106.251.89   <none>        80:31825/TCP   60s
   
-  # 访问地址：http://NodeIP:Port  
+  # 访问地址：http://NodeIP:31825  
   ```
 
 * 部署 Dashboard
@@ -387,7 +388,7 @@ $ kubeadm join <Master节点的IP和端口 >
   kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
   
   # 使用输出的token登录Dashboard
-  eyJhbGciOiJSUzI1NiIsImtpZCI6IjBHM2E1ZVp5TUpIeWxlTzdXNThDY3NxOUYxWmd2anNDY3pQM2I0M2NBOTgifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZ3Fia2siLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiODIyNjk4NmYtZDc5Mi00NDM2LWFlMmEtZTJmMjdjYWY4N2E0Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.OBdG-8rPMWuQlHLFCkmDOq_dYA27UmRqdagWoNBRlGoQEFd20Tr7_3hOQtEH0lWJ0b_TYKSbNsl3L3srfveHrFjLXS91mQjjTE11K6HlDTWCWIWxdFVpFUhVwkpW1jxt4PLrFw684SzpiXqBX5n-IuSpflpLkd3_jrWryx2j3o25-Mdv6W70fDuU-jJNvgNgdOeyYQNXwtBDjp8eB97rOtR-2dPiST4_2QMWG9ysXxtCE31RLdEKuXDRzkM24YdbMQ4CEbFh2mA4w8Y81e9HemmloFcRdawt13VvvLJNC7siIIe1mpQB-dUtTal7KgeXYmkO2SbzJyznCL_pldM8EA
+  eyJhbGciOiJSUzI1NiIsImtpZCI6IlBycTVTRUM0VGlnN1ZQSDRHWDhqRVJWQ1FzNWtPWGhsXzdYRURTSk8xNWsifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZmhiZ3EiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiODg1NGU3NDUtMjBhZS00YWUyLWEyNTktNDM2MjIwZWZiNTlkIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.FcNDE609QrjlPB_RaIKnwdjJdSX-Y6dobwGubB2X7hEuXyW0dfkg6MkmyabTxDcCXGmYFPSfHiGtLc8pprp6I0tz3T4L8IVOnFEKTnAmOArgb2Bq3CZyHe-D0uB6KBogaAXvzFLfIEiSpfo6Ddt5dmdwiCRXV6AbHOU4fRGT4zK0PKcfbaRWU2ZhnUFnGkAwiODA6NHctPaTDBwQj_npqcGJZRbYhnqsH5uaSNchELZxamQApsOkAPcnVx4JoOeaDVueRj38F9GzBjfIxp2o_97Jph_1GX-D83n1W_D8zkpyJyJ3MlW6yvfUN0lOUm6cIDuaKskoFh5ml_GDM6OSTg
   ```
 
   ```shell
