@@ -3,17 +3,132 @@
 ```shell
 # 删除退出的容器
 for i in `docker ps -a|grep -i exit|awk '{print $1}'`;do docker rm -f $i;done
-# 查看端口是否被监听
-netstat -luntp|grep 81
-# 下载网页
-wget www.baidu.com -O index.html
 # 查看环境变量
 printenv
 # 查看系统
 cat /etc/redhat-release
 ```
 
+## netstat
 
+```shell
+# 查看端口是否被监听
+netstat -luntp|grep 81
+```
+
+## grep
+
+```shell
+# 查找指定进程
+ps -ef|grep svn
+# 查找指定进程个数
+ps -ef|grep svn -c
+# 从文件中读取关键词进行搜索，输出test.txt文件中含有从test2.txt文件中读取出的关键词的内容行
+cat test.txt | grep -f test2.txt
+# 从文件中读取关键词进行搜索 且显示行号
+cat test.txt | grep -nf test2.txt
+# 从文件中查找关键词
+grep 'linux' test.txt
+grep -n 'linux' test.txt 
+# 从多个文件中查找关键词
+grep 'linux' test.txt test2.txt
+grep -n 'linux' test.txt test2.txt 
+# grep不显示本身进程
+ps aux | grep ssh | grep -v "grep"
+# 找出以u开头的行内容
+cat test.txt |grep ^u
+# 输出非u开头的行内容
+cat test.txt |grep ^[^u]
+# 输出以hat结尾的行内容
+cat test.txt |grep hat$
+# 显示包含ed或者at字符的内容行
+cat test.txt |grep -E "ed|at"
+# 搜索 /etc/passwd 文件下的 boo 用户，-i 强制忽略大小写
+grep boo /etc/passwd
+# 递归使用 grep ，在文件目录下面搜索所有包含字符串“192.168.1.5”的文件
+grep -r "192.168.1.5" /etc/
+#  -w 选项去强制只输出那些仅仅包含那个整个单词的行
+grep -w "boo" file
+# 使用 grep 命令去搜索两个不同的单词
+egrep -w 'word1|word2' /path/to/file
+# 统计文本匹配到的行数, -c 参数显示每个文件中匹配到的次数
+grep -c 'word' /path/to/file
+# 传递 -n 选项可以输出的行前加入匹配到的行的行号
+grep -n 'root' /etc/passwd
+# -v 选项来输出不包含匹配项的内容
+grep -v bar /path/to/file
+```
+
+## find
+
+```shell
+# 查找当前目录下 test.txt 文件
+find ./ -name 'test.txt'        
+```
+
+## wget
+
+```shell
+# 使用wget -O下载并以不同的文件名保存,下载网页
+wget www.baidu.com -O index.html
+```
+
+## curl
+
+```shell
+# 不带有任何参数时，curl 就是发出 GET 请求
+# -d参数用于发送 POST 请求的数据体
+curl -d'login=emma＆password=123'-X POST https://google.com/login
+# 读取data.txt文件的内容，作为数据体向服务器发送
+curl -d '@data.txt' https://google.com/login
+# --data-urlencode参数等同于-d，发送 POST 请求的数据体，区别在于会自动将发送的数据进行 URL 编码
+# 发送的数据hello world之间有一个空格，需要进行 URL 编码
+curl --data-urlencode 'comment=hello world' https://google.com/login
+# -F参数用来向服务器上传二进制文件
+# 原始文件名为photo.png，但是服务器接收到的文件名为me.png
+curl -F 'file=@photo.png;filename=me.png' https://google.com/profile
+# -k参数指定跳过 SSL 检测
+# 不会检查服务器的 SSL 证书是否正确
+curl -k https://www.example.com
+# -o参数将服务器的回应保存成文件，等同于wget命令
+curl -o example.html https://www.example.com
+# -O参数将服务器回应保存成文件，并将 URL 的最后部分当作文件名，将服务器回应保存成文件，文件名为bar.html
+curl -O https://www.example.com/foo/bar.html
+# -X参数指定 HTTP 请求的方法
+curl -X POST https://www.example.com
+```
+
+## tar
+
+```shell
+# 压缩、打包
+# gzip，1）压缩后的格式为：*.gz 2）不能保存原文件，且不能压缩目录
+gzip install.log        # 压缩
+gunzip buodo.gz  				# 解压
+zcat install.log.gz     # 查看
+
+# tar
+-z(gzip)      用gzip来压缩/解压缩文件
+-j(bzip2)     用bzip2来压缩/解压缩文件
+-v(verbose)   详细报告tar处理的文件信息
+-c(create)    创建新的档案文件
+-x(extract)   解压缩文件或目录
+-f(file)      使用档案文件或设备，这个选项通常是必选的
+tar -zcvf buodo.tar.gz buodo		# 【压缩】
+tar -zxvf buodo.tar.gz 					# 【解压】
+
+# zip，1）可以压缩目录； 2）可以保留原文件；
+-r(recursive)    递归压缩目录内的所有文件和目录
+zip boduo.zip boduo		# 压缩文件
+unzip boduo.zip				# 解压文件
+zip -r Demo.zip Demo	#【压缩目录】
+unzip Demo.zip				# 解压目录
+
+# 解压
+tar -zxvf /xxx/data.tar.gz -C /xxx/
+# 压缩
+tar -zcvf data.tar.gz /xxx/dir
+```
 
 ## 其他命令
 
@@ -208,7 +323,7 @@ q							# 退出
 man more      # 查看more有哪些功能
 # 不能直接到最后一页，可以使用tail来代替
 
-# less
+# 【less】
 ctrl+f							# 【向前翻一页】
 ctrl+b							# 【向后翻一页】
 G 									# 移动到最后一行
@@ -282,32 +397,6 @@ chmod u+x test1         # 用户加上x权限
 chmod u-x test1         # 用户减去x权限
 chmod g+x test1         # 组加上x权限
 chmod 760 tset1         # 设置权限
-```
-
-```shell
-# 压缩、打包
-
-# gzip，1）压缩后的格式为：*.gz 2）不能保存原文件，且不能压缩目录
-gzip install.log        # 压缩
-gunzip buodo.gz  				# 解压
-zcat install.log.gz     # 查看
-
-# tar
--z(gzip)      用gzip来压缩/解压缩文件
--j(bzip2)     用bzip2来压缩/解压缩文件
--v(verbose)   详细报告tar处理的文件信息
--c(create)    创建新的档案文件
--x(extract)   解压缩文件或目录
--f(file)      使用档案文件或设备，这个选项通常是必选的
-tar -zcvf buodo.tar.gz buodo		# 【压缩】
-tar -zxvf buodo.tar.gz 					# 【解压】
-
-# zip，1）可以压缩目录； 2）可以保留原文件；
--r(recursive)    递归压缩目录内的所有文件和目录
-zip boduo.zip boduo		# 压缩文件
-unzip boduo.zip				# 解压文件
-zip -r Demo.zip Demo	#【压缩目录】
-unzip Demo.zip				# 解压目录
 ```
 
 ```shell

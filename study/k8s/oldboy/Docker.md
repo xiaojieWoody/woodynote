@@ -125,8 +125,8 @@ docker run -it 94woodyfine/alpine:v3.10.3_with_hello.txt /bin/sh
 # 导出镜像
 docker save ImageID > alpine:v3.10.3_with_hello
 docker rmi -f ImageID
-# 导入镜像
-docker load < alpine\:v3.10.3_with_hello.txt
+# 导入镜像 docker load -i alpine:v3.10.3_with_hello.txt
+docker load < alpine:v3.10.3_with_hello.txt
 docker images
 docker tag 257f0bd86214 94woodyfine/alpine:v3.10.3_with_hello.txt
 docker run -it --rm --name myalpine_with_hello.txt 257f0bd86214 /bin/sh
@@ -222,8 +222,9 @@ docker logs containerID
 
 ## USER/WORKDIR指令
 
-* USER指定用户
-* WORKDIR相当于cd
+* `USER`指定用户
+* `WORKDIR`相当于`cd`
+* 在设置了 WORKDIR 命令后，接下来的 COPY 和 ADD 命令中的相对路径就是相对于 WORKDIR 指定的路径
 
 ```shell
 cd /data/dockerfile/demo_1
@@ -240,6 +241,17 @@ nginx@fc0ec1842261:/usr/share/nginx/html$ pwd
 ```
 
 ## ADD/EXPOSE指令
+
+* ADD和COPY
+  * 都可以将主机上的资源复制或加入到容器镜像中，都是在构建镜像的过程中完成
+  * **COPY 和 ADD 命令不能拷贝上下文之外的本地文件**
+  * COPY指令只能从执行docker build所在的主机上读取资源并复制到镜像中。而ADD指令还支持通过URL从远程服务器读取资源并复制到镜像中
+    * 当需要从远程复制文件时，最好使用 curl 或 wget 命令来代替 ADD 命令。原因是，当使用 ADD 命令时，会创建更多的镜像层，当然镜像的 size 也会更大
+  * ADD解压压缩文件并把它们添加到镜像中
+  * 使用 COPY 指令，源文件的各种元数据都会保留。比如读、写、执行权限、文件变更时间等
+* 如果仅仅是把本地的文件拷贝到容器镜像中，COPY 命令是最合适不过的，支持 Go 风格的通配符*、？
+* 对于目录而言，COPY 和 ADD 命令具有相同的特点：**只复制目录中的内容而不包含目录自身**
+  * 需要在目标路径中指定这个目录的名称，如`COPY nickdir ./nickdir`
 
 ```shell
 vim Dockerfile
@@ -287,7 +299,42 @@ CentOS Linux release 7.8.2003 (Core)
 
 ## CMD/ENTRYPOINT指令
 
-* CMD：要启动容器时，执行的命令
+* CMD：用于指定在容器启动时所要执行的命令
+
+  * 为启动的容器指定默认要运行的程序，程序运行结束，容器也就结束。CMD 指令指定的程序可被 docker run 命令行参数中指定要运行的程序所覆盖
+  * 如果 Dockerfile 中如果存在多个 CMD 指令，仅最后一个生效
+
+* RUN 在 docker build构建的时候执行，并生成一个新的镜像，CMD 在docker run 容器运行的时候执行，在构建时不进行任何操作
+
+* ENTRYPOINT 用于给容器配置一个可执行程序。也就是说，每次使用镜像创建容器时，通过 ENTRYPOINT 指定的程序都会被设置为默认程序
+
+  * 类似于 CMD 指令，但其不会被 docker run 的命令行参数指定的指令所覆盖，而且这些命令行参数会被当作参数送给 ENTRYPOINT 指令指定的程序
+
+  * 在执行 docker run 的时候可以指定 ENTRYPOINT 运行所需的参数
+
+  * 如果 Dockerfile 中如果存在多个 ENTRYPOINT 指令，仅最后一个生效
+
+  * 可以搭配 CMD 命令使用：一般是变参才会使用 CMD ，这里的 CMD 等于是在给 ENTRYPOINT 传参
+
+    ```shell
+    FROM nginx
+    
+    ENTRYPOINT ["nginx", "-c"] # 定参
+    CMD ["/etc/nginx/nginx.conf"] # 变参 
+    
+    # 不传参运行
+    docker run  nginx:test
+    nginx -c /etc/nginx/nginx.conf
+    # 传参运行
+    docker run  nginx:test -c /etc/nginx/new.conf
+    nginx -c /etc/nginx/new.conf
+    ```
+
+* ENTRYPOINT 与 CMD 非常类似，不同的是通过`docker run`执行的命令不会覆盖 ENTRYPOINT，而`docker run`命令中指定的任何参数，都会被当做参数再次传递给 ENTRYPOINT。Dockerfile 中只允许有一个 ENTRYPOINT 命令，多指定时会覆盖前面的设置，而只执行最后的 ENTRYPOINT 指令
+
+* `docker run`运行容器时指定的参数都会被传递给 ENTRYPOINT ，且会覆盖 CMD 命令指定的参数
+
+* 也可通过`docker run --entrypoint`重写 ENTRYPOINT 入口点
 
 ```shell
 FROM centos:7
@@ -322,6 +369,9 @@ http://192.168.0.244:84/
 ```
 
 ## 综合
+
+* 加速镜像的 build 过程
+  * 比如把那些最不容易发生变化的文件的拷贝操作放在较低的镜像层中，这样在重新 build 镜像时就会使用前面 build 产生的缓存
 
 ```shell
 FROM 94woodyfine/nginx:v1.12.2

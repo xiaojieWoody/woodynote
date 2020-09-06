@@ -1,0 +1,1392 @@
+# K8s核心概念
+
+## 有了Docker，为什么还需要Kubernetes
+
+![image-20200905211050079](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200905211050079.png)
+
+## Kubernetes是什么
+
+* Kubernetes是Google在2014年开源的一个容器集群管理系统，Kubernetes简称K8S
+* Kubernetes用于容器化应用程序的部署，扩展和管理，目标是让部署容器化应用简单高效
+* 一个容器平台
+* 便携式云平台
+* 一个微服务平台
+
+## Kubernetes特性
+
+* #### Service 拓扑
+
+  * 基于集群拓扑的服务流量路由
+
+* #### 服务发现与负载均衡
+
+  * 无需修改您的应用程序即可使用陌生的服务发现机制
+  * Kubernetes 为容器提供了自己的 IP 地址和一个 DNS 名称，并且可以在它们之间实现负载均衡
+
+* #### 端点切片
+
+  * Kubernetes 集群中网络端点的可扩展跟踪
+
+* #### 自我修复
+
+  * 重新启动失败的容器，在节点死亡时替换并重新调度容器，杀死不响应用户定义的健康检查的容器，并且在它们准备好服务之前不会将它们公布给客户端
+
+* #### 自动化展开和回滚
+
+  * Kubernetes 会逐步推出针对应用或其配置的更改，确保在监视应用程序运行状况的同时，不会终止所有实例。如果出现问题，Kubernetes 会为您回滚更改。充分利用不断成长的部署解决方案生态系统
+
+* #### Secret 和配置管理
+
+  * 部署和更新 Secrets 和应用程序的配置而不必重新构建容器镜像，且 不必将软件堆栈配置中的秘密信息暴露出来
+
+* #### 自动装箱
+
+  * 根据资源需求和其他约束自动放置容器，同时避免影响可用性。将关键性工作负载和尽力而为性质的服务工作负载进行混合放置，以提高资源利用率并节省更多资源
+
+* #### 批量执行
+
+  * 除了服务之外，Kubernetes 还可以管理你的批处理和 CI 工作负载，在期望时替换掉失效的容器
+
+* #### IPv4/IPv6 双协议栈
+
+  * 为 Pod 和 Service 分配 IPv4 和 IPv6 地址
+
+* #### 水平扩缩
+
+  * 使用一个简单的命令、一个UI或基于CPU使用情况自动对应用程序进行扩缩
+
+## Kubernetes集群架构与组件
+
+![image-20200905211944905](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200905211944905.png)
+
+![image-20200905212329239](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200905212329239.png)
+
+### **Master组件**
+
+```shell
+Master：主控节点，调度分配、控制管理、API调用、状态存储（etcd）、健康检查、认证
+apiserver：
+1、整个集群的入口
+2、提供API
+3、apiserver处理事情状态都存储到ETCD数据库
+4、客户端/UI 都是向apiserver发送请求
+controller-manager：
+1、背后工作者，一个资源对应一个控制器
+scheduler：
+1、调度pod分配到某个节点
+```
+
+* **kube-apiserver**
+  * Kubernetes API，集群的统一入口，各组件协调者，以RESTful API提供接口服务，所有对象资源的增删改查和监听操作都交给APIServer处理后再提交给Etcd存储
+* **kube-controller-manager**
+  * 处理集群中常规后台任务，一个资源对应一个控制器，而ControllerManager就是负责管理这些控制器的
+*  **kube-scheduler**
+  * 根据调度算法为新创建的Pod选择一个Node节点，可以任意部署,可以部署在同一个节点上,也可以部署在不同的节点上
+*  **etcd**
+  * 分布式键值存储系统。用于保存集群状态数据，比如Pod、Service等对象信息
+
+### **Node组件**
+
+```shell
+Node：工作节点，运行容器、容器状态监控、容器网络代理、负载均衡
+kubelet：
+1、在每个节点运行一个代理kubelet
+2、负责管理容器的生命周期并且汇报这些状态给apiserver
+
+kube-proxy：
+1、Pod网络代理，为它提供访问
+```
+
+*  **kubelet**
+  * kubelet是Master在Node节点上的Agent，管理本机运行容器的生命周期，比如创建容器、Pod挂载数据卷、下载secret、获取容器和节点状态等工作。kubelet将每个Pod转换成一组容器
+*  **kube-proxy**
+  * 在Node节点上实现Pod网络代理，维护网络规则和四层负载均衡工作
+* **docker或rocket**
+  * 容器引擎，运行容器
+
+## Kubernetes基本概念
+
+```shell
+官方文档重点看：
+1、概念栏，全看
+2、任务栏，具体任务示例
+3、教程栏，有状态应用部署和无状态应用部署案例
+4、参考栏，API、kubectl、二进制文件启动参数
+```
+
+### **Pod**
+
+* 最小部署单元
+* 一组容器的集合
+* 一个Pod中的容器共享网络命名空间
+* Pod是短暂的
+
+###  **Controllers**
+
+* 更高级层次对象，部署和管理Pod
+
+* Deployment ： 无状态应用部署
+* StatefulSet ： 有状态应用部署
+* DaemonSet ： 确保所有Node运行同一个Pod
+* Job ： 一次性任务
+* Cronjob ： 定时任务
+
+### **Service**
+
+* 防止Pod失联
+* 定义一组Pod的访问策略
+
+### Label 
+
+* 标签，附加到某个资源上，用于关联对象、查询和筛选
+
+### Namespaces
+
+* 命名空间，将对象逻辑上隔离
+
+# **快速部署一个 K8s 集群**
+
+* NODE 32核 128G内存 ，大概能跑二十三个左右
+* NODE 64核 512G内存，默认最多110个，例如Java 1C1G ，大概能跑60个左右
+
+```shell
+在开始之前，部署Kubernetes集群机器需要满足以下几个条件：
+- 一台或多台机器，操作系统 CentOS7.x-86_x64
+- 硬件配置：2GB或更多RAM，2个CPU或更多CPU，硬盘30GB或更多
+- 集群中所有机器之间网络互通
+- 可以访问外网，需要拉取镜像
+- 禁止swap分区
+vi /etc/fstab
+# 注释掉
+# /dev/mapper/centos-swap swap                    swap    defaults        0 0
+# reboot重启 
+free -m    # 都显示0则关闭成功
+
+关闭防火墙：
+$ systemctl stop firewalld
+$ systemctl disable firewalld
+
+关闭selinux：
+$ sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
+$ setenforce 0  # 临时
+
+192.168.0.31	hostnamectl set-hostname k8s-master bash
+192.168.0.32	hostnamectl set-hostname k8s-node1 bash
+192.168.0.34	hostnamectl set-hostname k8s-node2 bash
+
+# 在master添加hosts：
+cat >> /etc/hosts << EOF
+192.168.0.31 k8s-master
+192.168.0.32 k8s-node1
+192.168.0.34 k8s-node2
+EOF
+
+# 将桥接的IPv4流量传递到iptables的链：
+cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+$ sysctl --system  # 生效
+
+# 时间同步：
+$ yum install ntpdate -y
+$ ntpdate time.windows.com
+```
+
+## **官方提供的三种部署方式**
+
+### **minikube**
+
+* Minikube是一个工具，可以在本地快速运行一个单点的Kubernetes，仅用于尝试Kubernetes或日常开发的用户使用
+* 部署地址：https://kubernetes.io/docs/setup/minikube/
+
+### **kubeadm**
+
+* Kubeadm也是一个工具，提供kubeadm init和kubeadm join，用于快速部署Kubernetes集群
+* 部署地址：https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm/
+
+```shell
+kubeadm是官方社区推出的一个用于快速部署kubernetes集群的工具。
+这个工具能通过两条指令完成一个kubernetes集群的部署：
+# 创建一个 Master 节点
+$ kubeadm init
+# 将一个 Node 节点加入到当前集群中
+$ kubeadm join <Master节点的IP和端口 >
+```
+
+* 所有节点安装Docker/kubeadm/kubelet
+
+  ```shell
+  # 安装Docker
+  wget https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -O /etc/yum.repos.d/docker-ce.repo
+  yum -y install docker-ce-18.06.1.ce-3.el7
+  systemctl enable docker && systemctl start docker
+  docker --version
+  	Docker version 18.06.1-ce, build e68fc7a
+  
+  cat > /etc/docker/daemon.json << EOF
+  {
+    "registry-mirrors": ["https://b9pmyelo.mirror.aliyuncs.com"]
+  }
+  EOF
+  ```
+
+  ```shell
+  # 添加阿里云YUM软件源
+  cat > /etc/yum.repos.d/kubernetes.repo << EOF
+  [kubernetes]
+  name=Kubernetes
+  baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+  enabled=1
+  gpgcheck=0
+  repo_gpgcheck=0
+  gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+  EOF
+  ```
+
+  ```shell
+  # 安装kubeadm，kubelet和kubectl
+  # 由于版本更新频繁，这里指定版本号部署：
+  yum install -y kubelet-1.17.0 kubeadm-1.17.0 kubectl-1.17.0
+  systemctl enable kubelet
+  ```
+
+* 部署Kubernetes Master
+
+  ```shell
+  # master
+  kubeadm init \
+    --apiserver-advertise-address=192.168.0.31 \
+    --image-repository registry.aliyuncs.com/google_containers \
+    --kubernetes-version v1.17.0 \
+    --service-cidr=10.96.0.0/12 \
+    --pod-network-cidr=10.244.0.0/16
+  
+  # 由于默认拉取镜像地址k8s.gcr.io国内无法访问，这里指定阿里云镜像仓库地址
+  # 使用kubectl工具：
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  
+  # 连接集群的文件
+  cat /etc/kubernetes/admin.conf
+  
+  # node上执行，加入master集群
+  kubeadm join 192.168.0.31:6443 --token ts6zfd.7qbqx1zfgfcf3tt3 \
+      --discovery-token-ca-cert-hash sha256:af8ea1ef58a7568017014c95fb705f4e6e332c48168418665252ea266c43215c
+  ```
+
+  ```shell
+  kubeadm init引导过程：
+  1、检查系统环境是否满足，例如swap是否关闭、配置是否满足
+  2、下载所需镜像，kubeadm config images pull
+  3、为kubelet创建配置文件并启动
+  4、为apiserver、etcd生成https证书（/etc/kubernetes/pki/）
+  5、生成连接apiserver的kubeconfig文件
+  6、容器启动master组件
+  7、将涉及的配置文件存储到configmap
+  8、设置master节点不可调度Pod
+  9、启用bootstrap自动为kubelet颁发证书
+  10、安装插件：CoreDNS、kube-proxy
+  最后一步，提示你拷贝连接k8s集群的配置文件。
+  ```
+
+  ```shell
+  # 查看日志
+  tail /var/log/messages
+  ```
+
+* 安装Pod网络插件（CNI）
+
+  ```shell
+  wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+  kubectl apply -f kube-flannel.yml
+  # 确保能够访问到quay.io这个registery
+  # 如果Pod镜像下载失败，yaml中可以改成这个镜像地址：lizhenliang/flannel:v0.11.0-amd64
+  # [root@k8s-master ~]# docker pull lizhenliang/flannel:v0.11.0-amd64
+  # 两个地方 initContainers和containers:
+  image: lizhenliang/flannel:v0.11.0-amd64
+  ```
+
+* 加入Kubernetes Node
+
+  ```shell
+  # node
+  # 向集群添加新节点，执行在kubeadm init输出的kubeadm join命令
+  kubeadm join 192.168.31.61:6443 --token esce21.q6hetwm8si29qxwn \
+      --discovery-token-ca-cert-hash sha256:00603a05805807501d7181c3d60b478788408cfe6cedefedb1f97569708be9c5
+      
+  [root@k8s-master ~]# kubectl get nodes
+  NAME         STATUS   ROLES    AGE   VERSION
+  k8s-master   Ready    master   16m   v1.17.0
+  k8s-node1    Ready    <none>   10m   v1.17.0
+  k8s-node2    Ready    <none>   10m   v1.17.0
+  [root@k8s-master ~]#  kubectl get pods -n kube-system
+      
+  # 默认token有效期为24小时，当过期之后，该token就不可用了。这时就需要重新创建token，操作如下
+  kubeadm token create
+  # 得到 pjj0pe.f0z4ma59le7r48jt
+  kubeadm token list
+  openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+  63bca849e0e01691ae14eab449570284f0c3ddeea590f8da988c07fe2729e924
+  
+  # 替换 nuja6n.o3jrhsffiqs9swnu 和 63bca849e0e01691ae14eab449570284f0c3ddeea590f8da988c07fe2729e924即可
+  kubeadm join 192.168.31.61:6443 --token nuja6n.o3jrhsffiqs9swnu --discovery-token-ca-cert-hash sha256:63bca849e0e01691ae14eab449570284f0c3ddeea590f8da988c07fe2729e924
+  
+  # 快捷方式
+  kubeadm token create --print-join-command
+  https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/
+  ```
+
+* 测试kubernetes集群
+
+  ```shell
+  # 在Kubernetes集群中创建一个pod，验证是否正常运行：
+  $ kubectl create deployment nginx --image=nginx
+  $ kubectl expose deployment nginx --port=80 --type=NodePort
+  $ kubectl get pod,svc
+  
+  # 访问地址：http://NodeIP:Port  
+  ```
+
+* 部署 Dashboard
+
+  ```shell
+  wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta8/aio/deploy/recommended.yaml
+  # 默认Dashboard只能集群内部访问，修改Service为NodePort类型，暴露到外部
+  kind: Service
+  apiVersion: v1
+  metadata:
+    labels:
+      k8s-app: kubernetes-dashboard
+    name: kubernetes-dashboard
+    namespace: kubernetes-dashboard
+  spec:
+    type: NodePort                        # 新增
+    ports:
+      - port: 443
+        targetPort: 8443
+        nodePort: 30001                   # 新增
+    selector:
+      k8s-app: kubernetes-dashboard
+      
+  # 创建    
+  $ kubectl apply -f recommended.yaml
+  # 查看
+  [root@k8s-master ~]# kubectl get pods -n kubernetes-dashboard
+  NAME                                         READY   STATUS    RESTARTS   AGE
+  dashboard-metrics-scraper-76585494d8-9v485   1/1     Running   0          52s
+  kubernetes-dashboard-5996555fd8-msgnp        1/1     Running   0          52s
+  
+  # 火狐浏览器
+  # 访问地址：http://NodeIP:30001
+  
+  # 创建service account并绑定默认cluster-admin管理员集群角色：
+  kubectl create serviceaccount dashboard-admin -n kube-system
+  kubectl create clusterrolebinding dashboard-admin --clusterrole=cluster-admin --serviceaccount=kube-system:dashboard-admin
+  kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
+  
+  # 使用输出的token登录Dashboard
+  eyJhbGciOiJSUzI1NiIsImtpZCI6IjBHM2E1ZVp5TUpIeWxlTzdXNThDY3NxOUYxWmd2anNDY3pQM2I0M2NBOTgifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZ3Fia2siLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiODIyNjk4NmYtZDc5Mi00NDM2LWFlMmEtZTJmMjdjYWY4N2E0Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.OBdG-8rPMWuQlHLFCkmDOq_dYA27UmRqdagWoNBRlGoQEFd20Tr7_3hOQtEH0lWJ0b_TYKSbNsl3L3srfveHrFjLXS91mQjjTE11K6HlDTWCWIWxdFVpFUhVwkpW1jxt4PLrFw684SzpiXqBX5n-IuSpflpLkd3_jrWryx2j3o25-Mdv6W70fDuU-jJNvgNgdOeyYQNXwtBDjp8eB97rOtR-2dPiST4_2QMWG9ysXxtCE31RLdEKuXDRzkM24YdbMQ4CEbFh2mA4w8Y81e9HemmloFcRdawt13VvvLJNC7siIIe1mpQB-dUtTal7KgeXYmkO2SbzJyznCL_pldM8EA
+  ```
+
+  ```shell
+  # 证书
+  /etc/kubernetes/pki/
+  # 证书分为
+  1. 自签，cfssl、openssl
+  2. 权威机构办法
+  # 安装目录
+  /etc/kubernetes/
+  # 日志
+  /var/log/messages
+  ```
+
+* 解决浏览器无法访问dashboard
+
+  ```shell
+  # 二进制 部署
+  # 注意你部署Dashboard的命名空间（之前部署默认是kube-system，新版是kubernetes-dashboard）
+  1、 删除默认的secret，用自签证书创建新的secret
+  kubectl delete secret kubernetes-dashboard-certs -n kubernetes-dashboard
+  kubectl create secret generic kubernetes-dashboard-certs \
+  --from-file=/opt/kubernetes/ssl/server-key.pem --from-file=/opt/kubernetes/ssl/server.pem -n kubernetes-dashboard
+  
+  2、修改 dashboard.yaml 文件，在args下面增加证书两行
+         args:
+           # PLATFORM-SPECIFIC ARGS HERE
+           - --auto-generate-certificates
+           - --tls-key-file=server-key.pem
+           - --tls-cert-file=server.pem
+  
+  kubectl apply -f kubernetes-dashboard.yaml
+  
+  
+  # kubeadm 部署
+  # 注意你部署Dashboard的命名空间（之前部署默认是kube-system，新版是kubernetes-dashboard）
+  1、删除默认的secret，用自签证书创建新的secret
+  kubectl delete secret kubernetes-dashboard-certs -n kubernetes-dashboard
+  kubectl create secret generic kubernetes-dashboard-certs \
+  --from-file=/etc/kubernetes/pki/apiserver.key --from-file=/etc/kubernetes/pki/apiserver.crt -n kubernetes-dashboard
+  
+  2、修改 dashboard.yaml 文件，在args下面增加证书两行
+         args:
+           # PLATFORM-SPECIFIC ARGS HERE
+           - --auto-generate-certificates
+           - --tls-key-file=apiserver.key
+           - --tls-cert-file=apiserver.crt
+  
+  kubectl apply -f kubernetes-dashboard.yaml
+  
+  [root@k8s-master ~]# kubectl get pods -n kubernetes-dashboard
+  NAME                                         READY   STATUS    RESTARTS   AGE
+  dashboard-metrics-scraper-76585494d8-9v485   1/1     Running   0          17m
+  kubernetes-dashboard-7d995c554c-pwv4c        1/1     Running   0          56s
+  ```
+
+* 查看token
+
+  ```shell
+  [root@k8s-master ~]# kubectl get secret -n kube-system | grep admin
+  dashboard-admin-token-gqbkk                      kubernetes.io/service-account-token   3      10m
+  [root@k8s-master ~]# kubectl describe secret dashboard-admin-token-gqbkk -n kube-system
+  eyJhbGciOiJSUzI1NiIsImtpZCI6IjBHM2E1ZVp5TUpIeWxlTzdXNThDY3NxOUYxWmd2anNDY3pQM2I0M2NBOTgifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZ3Fia2siLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiODIyNjk4NmYtZDc5Mi00NDM2LWFlMmEtZTJmMjdjYWY4N2E0Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.OBdG-8rPMWuQlHLFCkmDOq_dYA27UmRqdagWoNBRlGoQEFd20Tr7_3hOQtEH0lWJ0b_TYKSbNsl3L3srfveHrFjLXS91mQjjTE11K6HlDTWCWIWxdFVpFUhVwkpW1jxt4PLrFw684SzpiXqBX5n-IuSpflpLkd3_jrWryx2j3o25-Mdv6W70fDuU-jJNvgNgdOeyYQNXwtBDjp8eB97rOtR-2dPiST4_2QMWG9ysXxtCE31RLdEKuXDRzkM24YdbMQ4CEbFh2mA4w8Y81e9HemmloFcRdawt13VvvLJNC7siIIe1mpQB-dUtTal7KgeXYmkO2SbzJyznCL_pldM8EA
+  
+  # 或者
+  kubectl describe secrets -n kube-system $(kubectl -n kube-system get secret | awk '/dashboard-admin/{print $1}')
+  ```
+
+* 重做，清理环境
+
+  ```shell
+  # master、node上
+  kubeadm reset
+  ```
+
+### **二进制**
+
+* 推荐，从官方下载发行版的二进制包，手动部署每个组件，组成Kubernetes集群
+* 下载地址：https://github.com/kubernetes/kubernetes/releases
+
+## **服务器硬件配置推荐**
+
+![image-20200905215201215](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200905215201215.png)
+
+# **kubectl 命令行管理工具**
+
+## 常用命令
+
+![image-20200906000944821](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906000944821.png)
+
+```shell
+create # 创建
+apply  # 创建和更新
+kubectl get pods -o wide|yaml|json|name
+[root@k8s-master ~]# kubectl get pods --show-labels
+[root@k8s-master ~]# kubectl get pods -l app=nginx
+```
+
+## 使用kubectl管理应用生命周期
+
+```shell
+持续集成：提交代码->代码构建->可部署的包->打包镜像->推送镜像仓库
+交付物：镜像
+实现：
+1、gitlab+jenkins+docker+harbor
+2、手动完成
+
+K8s持续部署：kubectl命令行/yaml文件->创建资源->将你的应用暴露出去->更新镜像->回滚到上一个镜像或者指定镜像版本->删除资源
+```
+
+```shell
+# 1、创建
+kubectl create deployment web --image=lizhenliang/java-demo 
+kubectl get deploy,pods
+
+# 2、发布
+# --port=80 集群内部访问端口，镜像服务使用的端口--target-port=80，服务名称Service --name=web，类型--type=NodePort
+kubectl expose deployment web --port=80 --type=NodePort --target-port=80 --name=web
+kubectl get service
+kubectl get all
+[root@k8s-master ~]# kubectl get svc
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+java-web-service   NodePort    10.96.33.65     <none>        80:31497/TCP   12s
+kubernetes         ClusterIP   10.96.0.1       <none>        443/TCP        8h
+nginx              NodePort    10.96.169.181   <none>        80:32408/TCP   7h10m
+# 访问
+# http://NodeId:31497
+# http://192.168.0.32:31497/
+
+# 扩容
+kubectl scale deployment java-web --replicas=2
+
+# 3、升级
+kubectl set image deployment/web nginx=nginx:1.15
+kubectl rollout status deployment/nginx-deployment  # 查看升级状态
+[root@k8s-master ~]# kubectl get deployment
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+java-web   1/1     1            1           8m10s
+nginx      1/1     1            1           7h14m
+[root@k8s-master ~]# kubectl edit deployment java-web
+name: java-demo
+# --record 记录命令
+[root@k8s-master ~]# kubectl set image deployment java-web java-demo=tomcat --record 
+[root@k8s-master ~]# kubectl get pods
+NAME                        READY   STATUS    RESTARTS   AGE
+java-web-84c6d798fb-flfrz   1/1     Running   0          2m18s
+[root@k8s-master ~]# kubectl exec -it java-web-84c6d798fb-flfrz bash
+root@java-web-84c6d798fb-flfrz:/usr/local/tomcat# cd webapps
+root@java-web-84c6d798fb-flfrz:/usr/local/tomcat/webapps# ls
+root@java-web-84c6d798fb-flfrz:/usr/local/tomcat/webapps# mkdir ROOT
+root@java-web-84c6d798fb-flfrz:/usr/local/tomcat/webapps# cd ROOT
+root@java-web-84c6d798fb-flfrz:/usr/local/tomcat/webapps/ROOT# echo "Hello" > index.html
+# 访问
+http://192.168.0.32:31497/
+
+# 4、回滚
+kubectl rollout history deployment/web  # 查看发布记录
+kubectl rollout undo deployment/web   # 回滚最新版本
+kubectl rollout undo deployment/web --to-revision=2  # 回滚指定版本
+[root@k8s-master ~]# kubectl rollout history deployment/java-web
+deployment.apps/java-web
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+[root@k8s-master ~]# kubectl rollout undo deployment/java-web
+deployment.apps/java-web rolled back
+# 访问
+http://192.168.0.32:31497/
+[root@k8s-master ~]# kubectl rollout undo deployment/java-web --to-revision=3
+
+# 5、删除
+kubectl delete deploy/web
+kubectl delete svc/web
+[root@k8s-master ~]# kubectl delete deployment/java-web
+deployment.apps "java-web" deleted
+[root@k8s-master ~]# kubectl delete service/java-web-service
+service "java-web-service" deleted
+```
+
+```shell
+通过示例得知：
+1、快速部署、回滚（快速原因是因为用现在镜像起副本，无需准备环境和测试）
+2、管理方便
+3、容器挂掉自动拉起，自我修复
+4、降低运维复杂度
+5、环境治理
+6、提高资源利用率
+```
+
+# **资源编排（YAML）**
+
+## **YAML文件格式说明**
+
+* YAML 是一种简洁的非标记语言。
+* 语法格式：
+  - 缩进表示层级关系
+
+  - 不支持制表符“tab”缩进，使用空格缩进
+
+  - 通常开头缩进 2 个空格
+
+  - 字符后缩进 1 个空格，如冒号、逗号等
+
+  - “---” 表示YAML格式，一个文件的开始
+
+  - “#”注释
+
+## **YAML文件创建资源对象**
+
+* 在K8S部署一个应用的YAML内容大致分为两部分：
+
+![image-20200906074441606](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906074441606.png)
+
+* 控制器定义：定义控制器属性
+* 被控制对象：Pod模板，定义容器属性
+
+![image-20200906074557272](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906074557272.png)
+
+## **资源字段太多，记不住怎么办**
+
+```shell
+# 用create命令生成部署模板
+kubectl create deployment nginx --image=nginx:1.14 -o yaml --dry-run> my-deploy.yaml
+[root@k8s-master ~]# kubectl create deployment java-web --image=lizhenliang/java-demo -o yaml --dry-run> my-deploy.yaml  
+  
+# 用get命令将已有部署的应用yaml导出
+kubectl get my-deploy/nginx -o=yaml --export  > my-deploy.yaml
+
+# 如果某个字段单词不记得了，可以通过explain查看更详细的帮助文档获得
+kubectl explain pods.spec.containers
+```
+
+# **深入理解Pod对象**
+
+## Pod介绍
+
+* 最小部署单元
+* 一组容器的集合
+* 一个Pod中的容器共享网络命名空间
+* Pod是短暂的
+
+## Pod存在的意义
+
+* Pod为亲密性应用而存在
+* 亲密性应用场景：（两个应用程序必须部署在同一台，他们之间会存在哪种协作形式？）
+  - 两个应用之间发生文件交互
+  - 两个应用需要通过127.0.0.1或者socket通信
+  - 两个应用需要发生频繁的调用
+* 容器是单进程模型，容器PID=1是父进程，运行一个应用，如果多个PID，那么PID=1挂了，其他子进程不好管理
+* Pod是多进程模型
+
+## Pod实现机制与设计模式
+
+* Pod本身是一个逻辑概念，没有具体存在，那究竟是怎么实现的呢？
+* 众所周知，容器之间是通过Namespace隔离的，Pod要想解决上述应用场景，那么就要让Pod里的容器之间高效共享。
+* 具体分为两个部分：网络和存储
+
+### 共享网络
+
+* kubernetes的解法是这样的：会在每个Pod里先启动一个`infra container`小容器，然后让其他的容器连接进来这个网络命名空间，然后其他容器看到的网络试图就完全一样了，即网络设备、IP地址、Mac地址等，这就是解决网络共享问题。在Pod的IP地址就是infra container的IP地址
+* pause容器
+
+### 共享存储
+
+* 比如有两个容器，一个是nginx，另一个是普通的容器，普通容器要想访问nginx里的文件，就需要nginx容器将共享目录通过volume挂载出来，然后让普通容器挂载的这个volume，最后大家看到这个共享目录的内容一样
+
+```yaml
+# pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: write
+    image: centos
+    command: ["bash","-c","for i in {1..100};do echo $i >> /data/hello;sleep 1;done"]
+    volumeMounts:
+      - name: data
+        mountPath: /data
+
+  - name: read
+    image: centos
+    command: ["bash","-c","tail -f /data/hello"]
+    volumeMounts:
+      - name: data
+        mountPath: /data
+  
+  volumes:
+  - name: data
+    emptyDir: {}
+```
+
+* 上述示例中有两个容器，write容器负责提供数据，read消费数据，通过数据卷将写入数据的目录和读取数据的目录都放到了该卷中，这样每个容器都能看到该目录
+
+```shell
+# 验证：
+kubectl apply -f pod.yaml
+kubectl logs my-pod -c read -f
+
+[root@k8s-master ~]# kubectl get pods -o wide | grep my-pod
+my-pod                      2/2     Running   9          38m   10.244.2.9    k8s-node2   <none>           <none>
+# node2上
+[root@k8s-node2 ~]# docker ps | grep my-pod
+03f954a7fca4        centos                                              "bash -c 'tail -f /d…"   39 minutes ago      Up 39 minutes                           k8s_read_my-pod_default_5170d3e9-8330-4492-97a9-2dd2afdf2a1f_0
+75df5c944eb4        registry.aliyuncs.com/google_containers/pause:3.1   "/pause"                 39 minutes ago      Up 39 minutes                           k8s_POD_my-pod_default_5170d3e9-8330-4492-97a9-2dd2afdf2a1f_0
+[root@k8s-node2 kubernetes.io~empty-dir]# cd /var/lib/kubelet/pods/5170d3e9-8330-4492-97a9-2dd2afdf2a1f/volumes/kubernetes.io~empty-dir/data/
+[root@k8s-node2 data]# ls
+hello
+[root@k8s-node2 data]# tail -f hello
+```
+
+### 在Pod中容器分为以下几个类型
+
+* **Infrastructure Container**：基础容器，维护整个Pod网络空间，对用户不可见
+* **InitContainers**：初始化容器，先于业务容器开始执行，一般用于业务容器的初始化工作
+* **Containers**：业务容器，具体跑应用程序的镜像
+
+## 镜像拉取策略
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+    - name: java
+      image: lizhenliang/java-demo
+      imagePullPolicy: IfNotPresent
+```
+
+* imagePullPolicy 字段有三个可选值：
+
+  - IfNotPresent：默认值，镜像在宿主机上不存在时才拉取
+  - Always：每次创建 Pod 都会重新拉取一次镜像
+  - Never： Pod 永远不会主动拉取这个镜像
+* 更新镜像：
+  1. kubectl set image
+  2. 修改yaml镜像的tag，然后apply
+* 如果拉取公开的镜像，直接按照上述示例即可，但要拉取私有的镜像，是必须认证镜像仓库才可以，即docker login，而在K8S集群中会有多个Node，显然这种方式是很不放方便的！为了解决这个问题，K8s 实现了自动拉取镜像的功能。 以secret方式保存到K8S中，然后传给kubelet
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  imagePullSecrets:
+    - name: myregistrykey
+  containers:
+    - name: java
+      image: lizhenliang/java-demo
+      imagePullPolicy: IfNotPresent
+```
+
+* 上述中名为  myregistrykey 的secret是由kubectl create secret docker-registry命令创建：
+
+```shell
+# kubectl create secret docker-registry NAME --docker-username=user --docker-password=password --docker-email=email --docker-server=string
+kubectl create secret docker-registry myregistrykey --docker-username=admin --docker-password=Harbor12345 --docker-email=admin@harbor.com --docker-server=192.168.31.70
+ 
+#--docker-server:  指定docke仓库地址
+#--docker-username:  指定docker仓库账号
+#--docker-password:  指定docker仓库密码
+#--docker-email:  指定邮件地址(选填)
+```
+
+## 资源限制
+
+* 资源限制好处：避免某容器资源利用率异常突发影响其他容器，可能会产生雪崩效应！
+
+* 内存、CPU
+  * limits：实际最大使用的配额
+  * requests：申请的配额，主要用于k8s做资源调度分配时参考值
+
+* Pod资源配额有两种：
+
+  - 申请配额：调度时使用，参考是否有节点满足该配置
+
+    ```shell
+    spec.containers[].resources.limits.cpu
+    spec.containers[].resources.limits.memory
+    ```
+
+  - 限制配额：容器能使用的最大配置
+
+    ```shell
+    spec.containers[].resources.requests.cpu
+    spec.containers[].resources.requests.memory
+    ```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web
+spec:
+  containers:
+  - name: java
+    image: lizhenliang/java-demo
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+```
+
+```shell
+其中cpu值比较抽象，可以这么理解：
+1核=1000m
+1.5核=1500m
+那上面限制配置就是1核的二分之一（500m），即该容器最大使用半核CPU。
+该值也可以写成浮点数，更容易理解：
+半核=0.5
+1核=1
+1.5核=1.5
+```
+
+## 重启策略
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+    - name: java
+      image: lizhenliang/java-demo
+    restartPolicy: Always
+```
+
+* restartPolicy字段有三个可选值：
+
+  - Always：当容器终止退出后，总是重启容器，默认策略。
+  - OnFailure：当容器异常退出（退出状态码非0）时，才重启容器。适于job
+  - Never：当容器终止退出，从不重启容器。适于job
+
+```shell
+守护进程式：要求持续性运行（Always），例如nginx、mysql、redis
+预期终止：批处理(任务类)（OnFailuer、Never）
+```
+
+## 健康检查
+
+* 默认情况下，kubelet 根据容器状态作为健康依据，但不能容器中应用程序状态，例如程序假死。这就会导致无法提供服务，丢失流量。因此引入健康检查机制确保容器健康存活
+
+* **健康检查有两种类型：**
+
+  ```shell
+  # livenessProbe (存活检查)
+  如果检查失败，将杀死容器，根据Pod的restartPolicy来操作。
+  # readinessProbe（就绪检查）
+  如果检查失败，Kubernetes会把Pod从service endpoints中剔除
+  ```
+
+* 这两种类型支持三种检查方法：
+
+* **Probe支持以下三种检查方法：**
+
+  ```shell
+  # httpGet
+  发送HTTP请求，返回200-400范围状态码为成功。
+  # exec
+  执行Shell命令返回状态码是0为成功。
+  # tcpSocket
+  发起TCP Socket建立成功。
+  ```
+
+* 示例
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      test: liveness
+    name: liveness-exec
+  spec:
+    containers:
+    - name: liveness
+      image: busybox
+      args:
+      - /bin/sh
+      - -c
+      - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 60
+      livenessProbe:
+        exec:
+          command:
+          - cat
+          - /tmp/healthy
+        initialDelaySeconds: 5
+        periodSeconds: 5
+  ```
+
+  * 上述示例：启动容器第一件事创建文件，停止30s，删除该文件，再停止60s，确保容器还在运行中。
+  * 验证现象：容器启动正常，30s后异常，会restartPolicy策略自动重建，容器继续正常，反复现象
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f probe.yaml
+  [root@k8s-master ~]# kubectl get pods
+  # restarts
+  [root@k8s-master ~]# kubectl describe pod liveness-exec
+  ```
+
+## 调度策略
+
+* 先看下创建一个Pod的工作流程：
+  * create pod -> apiserver -> write etcd -> scheduler -> bind pod to node -> write etcd -> kubelet( apiserver get pod) -> dcoekr api,create container -> apiserver -> update pod status to etcd -> kubectl get pods 
+
+![image-20200906091601838](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906091601838.png)
+
+* Pod根据调度器默认算法将Pod分配到合适的节点上，一般是比较空闲的节点。但有些情况我们希望将Pod分配到指定节点，该怎么做呢？
+* 调度策略：nodeName、nodeSelector和污点
+
+### nodeName
+
+* nodeName用于将Pod调度到指定的Node名称上。
+
+* 例如：下面示例会绕过调度系统，直接分配到k8s-node1节点
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      run: busybox
+    name: busybox
+    namespace: default
+  spec:
+    nodeName: k8s-node1
+    containers:
+    - image: busybox
+      name: bs
+      command:
+      - "ping"
+      - "baidu.com"
+  ```
+
+### nodeSelector
+
+* nodeSelector用于将Pod调度到匹配Label的Node上
+
+* 先给规划node用途，然后打标签，例如将两台node划分给不同团队使用：
+
+  ```shell
+  场景1：根据团队对机器进行分组，不同业务资源池
+  场景2：根据环境分组，例如测试、开发、预生产
+  ```
+
+  ```shell
+  kubectl label nodes k8s-node1 team=a
+  kubectl label nodes k8s-node2 team=b
+  
+  kubectl get node --show-labels
+  ```
+
+* 然后在创建Pod只会被调度到含有team=a标签的节点上
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: busybox
+    namespace: default
+  spec:
+    nodeSelector: 
+      team: b
+    containers:
+    - image: busybox
+      name: bs
+      command:
+      - "ping"
+      - "baidu.com"
+  ```
+
+### taint（污点）与tolerations（容忍）
+
+* 污点应用场景：节点独占，例如具有特殊硬件设备的节点，如GPU
+
+  ```shell
+  # 设置污点命令：
+  kubectl taint node [node] key=value[effect] 
+  # 其中[effect] 可取值： 
+  NoSchedule ：一定不能被调度。
+  PreferNoSchedule：尽量不要调度。
+  NoExecute：不仅不会调度，还会驱逐Node上已有的Pod
+  ```
+
+* 示例：
+
+  ```shell
+  # 先给节点设置污点，说明这个节点不是谁都可以调度过来的：
+  kubectl taint node k8s-node1  abc=123:NoSchedule
+  # 查看污点
+  kubectl describe node k8s-node1 |grep Taints
+  # 然后在创建Pod只有声明了容忍污点（tolerations），才允许被调度到abc=123污点节点上
+  kubectl create deployment web --image=nginx -o yaml --dry-run > web.yaml
+  ```
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      run: busybox
+    name: busybox3
+    namespace: default
+  spec:
+    tolerations:
+    - key: "abc"
+      operator: "Equal"
+      value: "123"
+      effect: "NoSchedule"
+    containers:
+    - image: busybox
+      name: bs
+      command:
+      - "ping"
+      - "baidu.com"
+  ```
+
+* 如果不配置容忍污点，则永远不会调度到k8s-node1
+
+  ```shell
+  # 去掉污点：
+  kubectl taint node [node] key:[effect]-
+  kubectl taint node k8s-node1 abc:NoSchedule-
+  ```
+
+```shell
+节点分类：
+1、有GPU，已经打了污点 GPU=YES:NoSchedule
+2、有固态硬盘，已经打了污点 SSD=YES:NoSchedule
+3、普通，没有打污点
+
+需求：
+1、有一个开发者需要部署一个常规应用
+2、有一个开发者需要部署一个带有GPU(必须)的应用+nodeSelector
+3、有一个开发者需要部署一个尽可能带有固态硬盘的应用
+```
+
+## 故障排查
+
+```shell
+# 查看事件，可用于大部分资源（没起来）
+kubectl describe TYPE/NAME    
+
+# 如果pod启动失败，先查看日志（起来后报错）
+kubectl logs TYPE/NAME [-c CONTAINER]  
+
+# 进入到容器中debug（起来后）
+kubectl exec POD [-c CONTAINER] -- COMMAND [args...]  
+```
+
+# **深入理解常用控制器**
+
+* **Deployment**：无状态部署
+* **DaemonSet**：守护进程部署
+* **Job**：批处理
+* **CronJob**：批处理
+
+## Pod与controller的关系
+
+* controllers：在集群上管理和运行容器的对象。有时也称为工作负载（workload）
+* 通过label-selector相关联，如下图所示。
+
+* Pod通过控制器实现应用的运维，如伸缩，滚动升级等
+
+![image-20200906095214271](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906095214271.png)
+
+## 无状态应用部署控制器 Deployment
+
+```shell
+无状态？
+1、不用过多基础环境，比如数据存储、网络ID
+2、Pod挂掉，IP发生了变化
+3、启动顺序
+
+RS作用？
+1、控制副本数量
+2、管理滚动升级（利用两个RS来实现）
+3、发布版本管理（可回滚）
+```
+
+* Deployment功能：
+
+  - 部署无状态应用（无状态应用简单来讲，就是Pod可以漂移任意节点，而不用考虑数据和IP变化）
+  - 管理Pod和ReplicaSet（副本数量管理控制器）
+  - 具有上线部署、副本设定、滚动升级、回滚等功能
+  - 提供声明式更新，例如只更新一个新的Image
+
+* 应用场景：Web服务，微服务
+
+* 下图是Deployment 标准YAML，通过标签与Pod关联
+
+  ![image-20200906095328380](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906095328380.png)
+
+* 使用YAML部署一个java应用：kubectl create deployment web --image=nginx --dry-run -o yaml > deployment_controller.yaml
+
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: web
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: web
+    template:
+      metadata:
+        labels:
+          app: web
+      spec:
+        containers:
+        - image: lizhenliang/java-demo
+          name: java
+  ```
+
+  ```shell
+  [root@k8s-master ~]# kubectl create deployment web --image=nginx --dry-run -o yaml > deployment_controller.yaml
+  [root@k8s-master ~]# vi deployment_controller.yaml
+  [root@k8s-master ~]# kubectl apply -f deployment_controller.yaml
+  [root@k8s-master ~]# kubectl get deployment
+  NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+  web        3/3     3            3           45s
+  [root@k8s-master ~]# kubectl get rs
+  # deployment副本数量 ReplicaSet
+  NAME                  DESIRED   CURRENT   READY   AGE
+  web-d86c95cc9         3         3         3       76s
+  # 查看rs事件
+  [root@k8s-master ~]# kubectl describe rs web-d86c95cc9
+  # 查看资源缩写
+  [root@k8s-master ~]# kubectl api-resources
+  ```
+
+* deployment
+
+  ```shell
+  # 创建
+  kubectl create deployment web --image=nginx:1.14 
+  kubectl get deploy,pods
+  
+  # 发布
+  kubectl expose deployment web --port=80 --type=NodePort --target-port=80 --name=web
+  kubectl get service
+  
+  # 升级
+  kubectl set image deployment/web nginx=nginx:1.15
+  kubectl rollout status deployment/web 
+  
+  # 回滚
+  kubectl rollout history deployment/web
+  kubectl rollout undo deployment/web
+  kubectl rollout undo deployment/web --revision=2
+  
+  # 扩容/缩容
+  kubectl scale deployment nginx-deployment --replicas=10
+  ```
+
+* ==查看命令使用帮助==
+
+  ```shell
+  [root@k8s-master ~]# kubectl rollout history --help
+  # 会有对应例子
+  ```
+
+* 将这个java应用暴露到集群外部访问
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: web
+    name: web
+  spec:
+    ports:
+    - port: 80             # 集群内容访问应用端口
+      protocol: TCP
+      targetPort: 8080     # 容器镜像端口
+      nodePort: 30008      # 对外暴露的端口
+    selector:
+      app: web
+    type: NodePort
+  ```
+
+  ```shell
+  [root@k8s-master ~]# kubectl expose deployment web --port=80 --target-port=80 --type=NodePort --name=web --dry-run -o yaml > service.yaml
+  [root@k8s-master ~]# vi service.yaml
+  [root@k8s-master ~]# kubectl apply -f service.yaml
+  [root@k8s-master ~]# kubectl get svc
+  NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+  web          NodePort    10.96.166.253   <none>        80:30231/TCP   10s
+  # 访问
+  http://192.168.0.32:30231/
+  ```
+
+  ```shell
+  # 升级
+  # web：deployment名；nginx：容器名
+  [root@k8s-master ~]# kubectl set image deployment web nginx=nginx:1.16
+  [root@k8s-master ~]# kubectl get pods -o wide
+  [root@k8s-master ~]# kubectl get rs
+  [root@k8s-master ~]# kubectl describe rs web-69b5444799
+  
+  [root@k8s-master ~]# kubectl get deploy
+  [root@k8s-master ~]# kubectl describe deploy web
+  # 滚动更新
+  # up 扩容，down 缩容
+  Scaled up replica set web-d86c95cc9 to 3   # 设置旧RS副本数为3
+  Scaled up replica set web-69b5444799 to 1  # 设置新RS副本数为1
+  Scaled down replica set web-d86c95cc9 to 2 # 设置旧RS副本数为2
+  Scaled up replica set web-69b5444799 to 2  # 设置新RS副本数为2
+  Scaled down replica set web-d86c95cc9 to 1 # 设置旧RS副本数为1
+  Scaled up replica set web-69b5444799 to 3  # 设置新RS副本数为3
+  Scaled down replica set web-d86c95cc9 to 0 # 设置旧RS副本数为0
+  ```
+
+* 查看资源：
+
+  ```yaml
+  kubectl get pods,svc
+  NAME                       READY   STATUS    RESTARTS   AGE
+  pod/web-7f9c858899-dcqwb   1/1     Running   0          18s
+  pod/web-7f9c858899-q26bj   1/1     Running   0          18s
+  pod/web-7f9c858899-wg287   1/1     Running   0          48s
+  
+  NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)        AGE
+  service/kubernetes   ClusterIP   10.1.0.1      <none>        443/TCP        5m55s
+  service/web          NodePort    10.1.157.27   <none>        80:30008/TCP   48s
+  ```
+
+  ```shell
+  # 浏览器输入：http://NodeIP:30008  即可访问到该应用
+  
+  升级项目，即更新最新镜像版本，这里换一个nginx镜像为例：
+  kubectl set image deployment/web nginx=nginx:1.15
+  kubectl rollout status deployment/web # 查看升级状态
+  
+  如果该版本发布失败想回滚到上一个版本可以执行：
+  kubectl rollout undo deployment/web   # 回滚最新版本
+  
+  也可以回滚到指定发布记录：
+  kubectl rollout history deployment/web  # 查看发布记录
+  kubectl rollout undo deployment/web --revision=2  # 回滚指定版本
+  
+  扩容/缩容：
+  kubectl scale deployment nginx-deployment --replicas=5 
+  --replicas设置比现在值大就是扩容，反之就是缩容。
+  ```
+
+* kubectl set image 会触发滚动更新，即分批升级Pod
+
+* 滚动更新原理其实很简单，利用新旧两个replicaset，例如副本是3个，首先Scale Up增加新RS副本数量为1，准备就绪后，Scale Down减少旧RS副本数量为2，以此类推，逐渐替代，最终旧RS副本数量为0，新RS副本数量为3，完成本次更新。这个过程可通过kubectl describe deployment web看到
+
+  ![image-20200906095617362](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906095617362.png)
+
+## 守护进程控制器 DaemonSet
+
+* DaemonSet功能：
+
+  - 在每一个Node上运行一个Pod
+  - 新加入的Node也同样会自动运行一个Pod
+
+* 应用场景：Agent，例如监控采集工具，日志采集工具
+
+  ![image-20200906095714218](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200906095714218.png)
+
+```shell
+[root@k8s-master ~]# kubectl get pods -n kube-system -o wide | grep flannel
+kube-flannel-ds-amd64-92hw7 				 1/1     Running   1          11h   192.168.0.32   k8s-node1    <none>           <none>
+kube-flannel-ds-amd64-cqhjx          1/1     Running   1          11h   192.168.0.31   k8s-master   <none>           <none>
+kube-flannel-ds-amd64-zk65h          1/1     Running   1          11h   192.168.0.34   k8s-node2    <none>           <none>
+```
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: web
+  name: monitor
+spec:
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - image: nginx
+        name: monitor
+```
+
+```shell
+[root@k8s-master ~]# cp deployment_controller.yaml ds.yaml
+[root@k8s-master ~]# vi ds.yaml
+# 没有副本数管理 
+# master上没有，除非打上污点
+[root@k8s-master ~]# kubectl apply -f ds.yaml
+[root@k8s-master ~]# kubectl get pods -o wide|grep monitor
+```
+
+##  批处理 Job & CronJob
+
+```shell
+运维主要写定时任务干啥？
+1、备份
+2、程序自动拉起
+3、上传ftp
+4、推数据
+
+开发主一些定时任务干啥？
+1、处理数据
+2、推送短信
+3、离线数据处理
+```
+
+* **Job：一次性执行**
+
+* 应用场景：离线数据处理，视频解码等业务
+
+  ```shell
+  [root@k8s-master ~]# kubectl create job --help
+  [root@k8s-master ~]# kubectl create job pi --image=perl --dry-run -o yaml > job_pi.yaml
+  [root@k8s-master ~]# vi job_pi.yaml
+  ```
+
+  ```yaml
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: pi
+  spec:
+    template:
+      spec:
+        containers:
+        - name: pi
+          image: perl
+          command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        restartPolicy: Never   # 作业失败后会不再尝试创建新的Pod
+    backoffLimit: 4   # .spec.backoffLimit字段限制重试次数。默认情况下，这个字段默认值是6。
+  ```
+
+  * 上述示例中将π计算到2000个位置并将其打印出来。完成大约需要10秒
+
+  ```shell
+  [root@k8s-master ~]# kubectl apply -f job_pi.yaml
+  # 查看任务
+  [root@k8s-master ~]# kubectl get pods,job 
+  [root@k8s-master ~]# kubectl logs pod/pi-scbdb
+  ```
+
+* CronJob：定时任务，像Linux的Crontab一样
+
+  * 应用场景：通知，备份
+
+    ```yaml
+    apiVersion: batch/v1beta1
+    kind: CronJob
+    metadata:
+      name: hello
+    spec:
+      schedule: "*/1 * * * *"
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              containers:
+              - name: hello
+                image: busybox
+                args:
+                - /bin/sh
+                - -c
+                - date; echo Hello from the Kubernetes cluster
+              restartPolicy: OnFailure  # 作业失败并返回状态码非0时，尝试创建新的Pod运行任务
+    ```
+
+    * 上述示例中将每分钟打印一次Hello
+
+      ```shell
+      [root@k8s-master ~]# kubectl apply -f cronJob.yaml
+      [root@k8s-master ~]# kubectl get cronjob
+      NAME    SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+      hello   */1 * * * *   False     1        30s             39s
+      [root@k8s-master ~]# kubectl get pods
+      [root@k8s-master ~]# kubectl logs hello-1599362340-pr7g5
+      Sun Sep  6 03:19:27 UTC 2020
+      Hello from the Kubernetes cluster
+      # 查看任务：
+      kubectl get pods,cronjob
+      ```
+
+      
+

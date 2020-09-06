@@ -379,3 +379,12 @@ DNS	 8.8.8.8，8.8.4.4
   * 输入exit
   * 选择Ubuntu启动
 
+# 安装shellcheck
+
+```shell
+yum -y install epel-release
+yum install ShellCheck
+
+apt-get install shellcheck
+```
+
