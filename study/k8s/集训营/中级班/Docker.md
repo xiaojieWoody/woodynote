@@ -34,6 +34,17 @@
 
 ![image-20200904213016532](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200904213016532.png)
 
+```shell
+#							Container													VM
+启动速度			 秒级																分钟级
+运行性能			 接近原生														 5%左右损失
+磁盘占用			 MB                                GB
+数量          成百上千                            一般几十台
+隔离性        进程级                              系统级（更彻底）
+操作系统       主要支持Linux                       几乎所有
+封装程度       只打包项目和依赖关系，共享宿主机内核    完整的操作系统
+```
+
 # 2. Docker基本使用
 
 ## CentOS7.x安装Docker
@@ -50,7 +61,20 @@ wget http://mirrors.aliyun.com/repo/Centos-7.repo
 wget http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
 yum makecache
 
-# selinux和 firewalld关闭
+# 禁止swap分区
+vi /etc/fstab
+# 注释掉
+# /dev/mapper/centos-swap swap                    swap    defaults        0 0
+# reboot重启 
+free -m    # 都显示0则关闭成功
+
+# 关闭防火墙：
+systemctl stop firewalld
+systemctl disable firewalld
+
+# 关闭selinux：
+sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
+setenforce 0  # 临时
 
 # 安装Docker CE
 yum install -y docker-ce
@@ -81,12 +105,15 @@ docker inspect image nginx
 * 一个镜像可以创建N个容器
 * 一种标准化的交付
 * 一个不包含Linux内核而又精简的Linux操作系统
-* 镜像不是一个单一的文件，而是有多层构成。可以通过docker history <ID/NAME> 查看镜像中各层内容及大小，每层对应着Dockerfile中的一条指令。Docker镜像默认存储在/var/lib/docker/\<storage-driver\>中
+* 镜像不是一个单一的文件，而是有多层构成。可以通过`docker history <ID/NAME>` 查看镜像中各层内容及大小，每层对应着`Dockerfile`中的一条指令。Docker镜像默认存储在`/var/lib/docker/<storage-driver>`中
 * 配置镜像加速器：https://www.daocloud.io/mirror
 * curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://f1361db2.m.daocloud.io
 
 ```shell
 docker info 
+docker --version
+docker version
+
 # Docker Root Dir: /var/lib/docker
 cd /var/lib/docker/overlay2
 # 后面会被来越大，最后使用软连接
@@ -95,7 +122,7 @@ cd /var/lib/docker/overlay2
 ## **理解容器镜像**
 
 * 容器其实是在镜像的最上面加了一层读写层，在运行容器里文件改动时，会先从镜像里要写的文件复制到容器自己的文件系统中（读写层）。如果容器删除了，最上面的读写层也就删除了，改动也就丢失了。所以无论多少个容器共享一个镜像，所做的写操作都是从镜像的文件系统中复制过来操作的，并不会修改镜像的源文件，这种方式提高磁盘利用率
-* 若想持久化这些改动，可以通过docker commit 将容器保存成一个新镜像
+* 若想持久化这些改动，可以通过`docker commit` 将容器保存成一个新镜像
   * 一个镜像创建多个容器
   * 镜像增量式存储
   * 创建的容器里面修改不会影响到镜像
@@ -123,6 +150,7 @@ pull
 push
 # 移除一个或多个镜像
 rm
+rmis
 # 移除未使用的镜像。没有被标记或被任何容器引用的
 prune
 # 创建一个引用源镜像标记目标镜像
@@ -153,24 +181,27 @@ load
 # 发布容器所有EXPOSE的端口到宿主机随机端口
 -P, –publish-all
 # 指定容器名称
-–name string
+--name string
 # 设置容器主机名
 -h, –hostname
 # 指定容器IP，只能用于自定义网络
 –ip string
 # 连接容器到一个网络
-–network
+--network
 # 将文件系统附加到容器
-–mount mount
+--mount mount
 # 绑定挂载一个卷
 -v, –volume list
 # 容器退出时重启策略，默认no，可选值：[always|on-failure]
-–restart string
+--restart string
 
-# 启动容器后，如果没有守护进程，则容器会推出
+# 启动容器后，如果没有守护进程，则容器会退出
 docker run -d --name hello -p 88:80 -e test=123456 --restart=always nginx
 docker exec -it hello bash
+
+# 查看容器运行了哪些进程
 docker top hello
+
 # nginx -g daemon off;
 global全局参数
 daemon守护进程
@@ -213,6 +244,8 @@ docker rm -f $(docker ps -qa)
 # 内存限额：
 # 允许容器最多使用500M内存和100M的Swap，并禁用 OOM Killer：
 docker run -d --name nginx03 --memory="500m" --memory-swap="600m" --oom-kill-disable nginx
+
+# 查看容器占用资源 
 docker stats nginx03
 
 # ab压测
@@ -245,9 +278,9 @@ cp
 logs
 # 列出或指定容器端口映射
 port
-# 显示一个容器运行的进程
+# 显示一个容器运行的进程, docker top containerID/containerName
 top
-# 显示容器资源使用统计
+# 显示容器资源使用统计，docker stats containerID/containerName
 stats
 # 停止/启动一个或多个容器
 stop/start/restart
@@ -266,9 +299,9 @@ rm
 ```
 
 * Docker提供三种方式将数据从宿主机挂载到容器中：
-  * volumes：Docker管理宿主机文件系统的一部分（/var/lib/docker/volumes）。保存数据的最佳方式
-  * bind mounts：将宿主机上的任意位置的文件或者目录挂载到容器中
-  * tmpfs：挂载存储在主机系统的内存中，而不会写入主机的文件系统。如果不希望将数据持久存储在任何位置，可以使用tmpfs，同时避免写入容器可写层提高性能
+  * `volumes`：Docker管理宿主机文件系统的一部分（`/var/lib/docker/volumes`）。保存数据的最佳方式
+  * `bind mounts`：将宿主机上的任意位置的文件或者目录挂载到容器中
+  * `tmpfs`：挂载存储在主机系统的内存中，而不会写入主机的文件系统。如果不希望将数据持久存储在任何位置，可以使用`tmpfs`，同时避免写入容器可写层提高性能
 
 ![image-20200904215956406](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200904215956406.png)
 
@@ -441,7 +474,7 @@ RUN tar zxf apache-tomcat-${VERSION}.tar.gz && \
     echo "ok" > /usr/local/tomcat/webapps/test/status.html && \
     sed -i '1a JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom"' /usr/local/tomcat/bin/catalina.sh && \
     ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-
+    
 ENV PATH $PATH:/usr/local/tomcat/bin
 
 WORKDIR /usr/local/tomcat
@@ -489,6 +522,14 @@ CMD java -jar $JAVA_OPTS /eureka-service.jar
   [root@slave2 harbor-1.9.1]# ./prepare
   [root@slave2 harbor-1.9.1]# ./install.sh
   [root@slave2 harbor-1.9.1]# docker-compose ps
+  
+  # 所有机器添加  harbor配置的hostname
+  # 配置http镜像仓库可信任
+  [root@master ~]# vi /etc/docker/daemon.json
+  "insecure-registries": ["192.168.0.33"]
+  # {"insecure-registries":["reg.ctnrs.com"]}
+  [root@master ~]# systemctl restart docker
+  
   # 访问
   http://192.168.0.33
   
@@ -502,42 +543,20 @@ CMD java -jar $JAVA_OPTS /eureka-service.jar
   test，添加test用户
   dev，添加dev用户
   
-  # 所有机器添加  harbor配置的hostname
-  [root@master ~]# vi /etc/docker/daemon.json
-  "insecure-registries": ["192.168.0.33"]
-  [root@master ~]# systemctl restart docker
-  
   # master上
   [root@master ~]# docker login 192.168.0.33
   Username: admin
   Password: Harbor12345
+  # 打标签
   [root@master ~]# docker tag tomcat:v1 192.168.0.33/library/tomcat:v1
+  # 上传
   [root@master ~]# docker push 192.168.0.33/library/tomcat:v1
+  # 下载
+  [root@master ~]# docker pull 192.168.0.33/library/tomcat:v1
   [root@master ~]# docker tag nginx:v1 192.168.0.33/library/nginx:v1
   [root@master ~]# docker push 192.168.0.33/library/nginx:v1
   ```
 
-* 配置
-
-  ```shell
-  # 配置http镜像仓库可信任
-  vi /etc/docker/daemon.json
-  {"insecure-registries":["reg.ctnrs.com"]}
-  systemctl restart docker
-  
-  docker login harbor
-  admin
-  Harbor12345
-  
-  # 打标签
-  docker tag nginx:v1 reg.ctnrs.com/library/nginx:v1
-  
-  # 上传
-  docker push reg.ctnrs.com/library/nginx:v1
-  
-  # 下载
-  docker pull reg.ctnrs.com/library/nginx:v1
-  ```
 
 
 # 5. **基于 Docker 构建企业 Jenkins CI 平台**
@@ -628,7 +647,7 @@ root@d62a3d6abd2c:/# cat /var/jenkins_home/secrets/initialAdminPassword
 root@d62a3d6abd2c:/# exit
 
 # 先不安装插件
-admin/123456s
+admin/123456
 
 # 安装插件
 # Manager Plugins - Advanced - Update Site URL
@@ -681,9 +700,9 @@ admin
 Harbor12345
 harbor-auth
 # git-auth
-5d22b38c-4f6b-477d-9cd0-2e6041af8bc8
+32c3ca28-5d6a-469f-8ca7-8fed37befc33
 # harbor-auth
-4558af14-5aa2-4099-9286-3cc960d28c72
+a2965746-84f6-46a1-8038-919bfc336fc5
 
 # pipeline script
 
