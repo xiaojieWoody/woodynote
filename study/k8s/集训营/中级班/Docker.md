@@ -530,6 +530,19 @@ CMD java -jar $JAVA_OPTS /eureka-service.jar
   # {"insecure-registries":["reg.ctnrs.com"]}
   [root@master ~]# systemctl restart docker
   
+  ----------------------
+  如果harbor.yml中的端口为81
+  vi /etc/docker/daemon.json
+  "insecure-registries": ["192.168.0.33:81"]
+  
+  docker login 192.168.0.33:81
+  admin
+  Harbor12345
+  
+  [root@k8s-master ~]# docker tag busybox 192.168.0.43:81/library/busybox:v1
+  [root@k8s-master ~]# docker push 192.168.0.43:81/library/busybox:v1
+  ----------------------
+  
   # 访问
   http://192.168.0.33
   
@@ -587,6 +600,7 @@ docker run -d \
   -v $PWD/data:/var/opt/gitlab \
   -v /etc/localtime:/etc/localtime \
   lizhenliang/gitlab-ce-zh:latest
+  
   gitlab/gitlab-ce:latest
   
 # 访问  
@@ -700,9 +714,9 @@ admin
 Harbor12345
 harbor-auth
 # git-auth
-32c3ca28-5d6a-469f-8ca7-8fed37befc33
+bec0ce2d-2461-48c3-9457-29ae3fe0230f
 # harbor-auth
-a2965746-84f6-46a1-8038-919bfc336fc5
+9139a58a-1ed3-4b2c-90ff-d18433f0ff1f
 
 # pipeline script
 

@@ -1,4 +1,4 @@
-# 搭建Centos7虚拟机
+#  搭建Centos7虚拟机
 
 * 使用国内镜像源
 
@@ -381,7 +381,8 @@ DNS	 8.8.8.8，8.8.4.4
 
 
 
-* 开机时按F9可选择是windows还是ubuntu启动
+* 惠普开机时按F9可选择是windows还是ubuntu启动
+* 机械革命开机时按F10选择是windows还是ubuntu启动
 
 
 
