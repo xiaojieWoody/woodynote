@@ -1,3 +1,10 @@
+```shell
+# 添加索引
+alter table tableName add primary key(id)
+```
+
+
+
 # MS
 
 * ==怎么删除表的前10000行==

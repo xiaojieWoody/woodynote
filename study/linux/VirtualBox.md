@@ -402,3 +402,70 @@ yum install ShellCheck
 apt-get install shellcheck
 ```
 
+# Mac 安装nginx
+
+```shell
+nginx: http://nginx.org/download/nginx-1.12.2.tar.gz
+zlib: http://zlib.net/zlib-1.2.11.tar.gz
+pcre: https://ftp.pcre.org/pub/pcre/pcre-8.38.tar.gz
+openssl: https://www.openssl.org/source/openssl-1.1.0g.tar.gz
+
+tar -zxvf nginx-1.12.2.tar.gz
+tar -zxvf zlib-1.2.11.tar.gz
+tar -zxvf pcre-8.38.tar.gz
+tar -zxvf openssl-1.1.0g.tar.gz
+
+# 进入nginx目录
+./configure --prefix=/usr/local/nginx --with-zlib=../zlib-1.2.11 --with-pcre=../pcre-8.38 --with-openssl=../openssl-1.1.0g
+# 依次执行以下命令
+make
+sudo make install
+# nginx 就被安装到 /usr/local/nginx 目录下
+# 启动
+sudo /usr/local/nginx/sbin/nginx
+
+# 关闭
+sudo /usr/local/nginx/sbin/nginx -s stop
+
+# 重启
+sudo /usr/local/nginx/sbin/nginx -s reload
+
+# 指定配置文件启动
+/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
+
+nginx: [error] invalid PID number "" in "/usr/local/nginx/logs/nginx.pid"
+# 解决方法：
+/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
+
+sudo lsof -i 4tcp:80
+
+nginx: [emerg] bind() to 0.0.0.0:80 failed (48: Address already in use)
+# mac解决办法
+mac自带的apache服务器
+sudo apachectl stop终止掉apache服务。问题解决
+```
+
+# Nginx代理本地域名访问虚拟机上服务（Nexus）
+
+```shell
+# nginx.conf
+server {
+        listen       80;
+        # （Mac）本地ip
+        server_name  192.168.0.104;
+
+        location / {
+        		 # 虚拟机上服务（Nexus）IP、Port
+             proxy_pass         http://192.168.0.35:8081;
+             proxy_set_header   Host             $host;
+             proxy_set_header   X-Real-IP        $remote_addr;
+             proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+	     			 proxy_set_header   X-Forwarded-Proto  $scheme;
+        }
+}
+# mac hosts
+192.168.0.104 www.nexusregistry.com
+# mac 浏览器访问
+http://www.nexusregistry.com
+```
+
