@@ -742,7 +742,7 @@ public class DemoHandler {
   <artifactId>spring-boot-starter-data-mongodb-reactive</artifactId>
 </dependency>
   
-spring.data.mongodb.username=root
+spring.data.mongodb.username=test
 spring.data.mongodb.password=123456
 spring.data.mongodb.host=localhost
 spring.data.mongodb.database=test
