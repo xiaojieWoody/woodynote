@@ -1,4 +1,18 @@
-![image-20200904202356719](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200904202356719.png)
+* Kubernetes入门：
+  * Docker基本使用，使用Dockerfile构建企业容器镜像，镜像仓库Harbor使用，Jenkins CI等实践
+  * 理解k8s核心概念、分布式架构的原理
+  * 从0到1部署生产级k8s高可用集群
+  * 深入Pod对象、常用控制器解析、深入理解Service
+* Kubernetes进阶
+  * 使用Ingress对外发布应用、应用程序配置管理、容器中应用程序数据持久化
+  * 有状态应用部署设计思路及实践
+  * 使用RBAC授权用户拥有的权限
+  * 探索k8s各项功能及使用经验分享
+* Kubernetes运维
+  * 巩固所学知识点，结合Java实际项目部署到k8s平台
+  * 使用主流Prometheus + Grafana全方位监控k8s
+  * 使用主流ELK Stack收集k8s平台日志
+  * 基于k8s构建企业Jenkins CI/CD平台
 
 # 1. 为什么要用容器？
 
@@ -31,8 +45,6 @@
 ## 容器 VS 虚拟机
 
 ![image-20200904212944827](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200904212944827.png)
-
-![image-20200904213016532](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200904213016532.png)
 
 ```shell
 #							Container													VM

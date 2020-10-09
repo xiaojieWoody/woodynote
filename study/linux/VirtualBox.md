@@ -75,6 +75,35 @@ systemctl disable firewalld.service
 systemctl status firewalld.service
 ```
 
+## 静态IP：NAT、桥接网络
+
+```shell
+# 使用 网络地址转换(NAT) 配合 仅主机(Host-Only)网络 设置静态 ip，可以当主机网络变化的时候静态 ip 依旧可用
+需要设置两个网卡，一个使用 网络地址转换(NAT) ，一个使用 仅主机(Host-Only)网络。NAT 负责让虚拟机与外网通信，Host-Only 负责虚拟机与主机通信，所谓静态 ip 指的是虚拟机与主机之间通信时虚拟机 ip 保持不变，即主要是 Host-Only 的作用
+```
+
+```shell
+# 1. 在 VirtualBox 上配置两个网卡
+管理>>全局设定>>网络>>创建+ >> 设置 >> 直接ok
+这样一来 NAT 网络就有了，为配置 网络地址转换(NAT) 网卡做好了准备
+# 2. 设置 Host-Only 网络为配置 Host-Only 网卡
+管理 >>主机网络管理器 >> 属性 >> 启用、手动配置网卡：IPv4地址192.168.0.2、IPv4网络掩码：255.255.255.0
+Host-Only 的默认网关就是 192.168.56.1
+# 3. 配置网卡 (虚拟机需要关机)
+右键>>设置>>网卡1 & 网卡2
+网卡1：启用网络连接：网络地址转换（NAT）
+网卡2：启用网络连接：仅主机（Host-Only）网络、记住MAC地址在虚拟机中配置时用得到
+# 4. 虚拟机配置静态 ip
+vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+添加
+HWADDR=刚才Host-Only网卡中的MAC地址
+IPADDR=192.168.56.37
+GATEWAY=192.168.56.1
+DNS1=114.114.114.114
+DNS2=8.8.8.8
+# 5. 虚拟机重启即可。主机通过 192.168.56.37 访问虚拟机，虚拟机通过 NAT 访问外网
+```
+
 ## jdk
 
 ```shell
@@ -443,6 +472,10 @@ nginx: [emerg] bind() to 0.0.0.0:80 failed (48: Address already in use)
 # mac解决办法
 mac自带的apache服务器
 sudo apachectl stop终止掉apache服务。问题解决
+
+/usr/local/nginx/logs/access.log" failed (13: Permission denied)
+# mac 解决办法
+sudo /usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
 ```
 
 # Nginx代理本地域名访问虚拟机上服务（Nexus）
@@ -467,5 +500,9 @@ server {
 192.168.0.104 www.nexusregistry.com
 # mac 浏览器访问
 http://www.nexusregistry.com
+```
+
+```shell
+
 ```
 

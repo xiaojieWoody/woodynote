@@ -43,3 +43,18 @@ docker tag 6d5fcfe5ff17 192.168.0.35:5000/busybox:v20200205
 docker push 192.168.0.35:5000/busybox:v20200205
 ```
 
+# API
+
+```shell
+# harbor API
+# 获取认证token
+curl -ikL -X GET -u admin:Harbor12345 http://192.168.0.35/service/token\?account\=admin\&service\=harbor-registry\&scope\=repository:library/nginx:pull
+# 根据token获取image的tags
+curl -ikL -X GET -H "Content-Type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1Q..." http://192.168.0.35/v2/library/nginx/tags/list
+
+# Nexus API
+# 根据name获取相关信息
+curl -u admin:111111 -X GET "http://192.168.0.35:8081/service/rest/v1/search?repository=docker-hosted&format=docker&name=openthings/busybox"
+curl -u admin:111111 -X GET "http://192.168.0.35:8081/service/rest/v1/search?name=test/nginx"
+```
+
