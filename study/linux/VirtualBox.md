@@ -122,6 +122,30 @@ export PATH=$PATH:$JAVA_HOME/bin
 # 验证命令：java -version
 ```
 
+## maven
+
+```shell
+[root@hadoop101 software]# tar -zxvf apache-maven-3.0.5-bin.tar.gz -C /opt/module/
+[root@hadoop101 apache-maven-3.0.5]# vi conf/settings.xml
+```
+
+```xml
+<mirror>
+  <id>nexus-aliyun</id>
+  <mirrorOf>central</mirrorOf>
+  <name>Nexus aliyun</name>
+  <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+</mirror>
+```
+
+```shell
+[root@hadoop101 apache-maven-3.0.5]# vi /etc/profile
+#MAVEN_HOME
+export MAVEN_HOME=/opt/module/apache-maven-3.0.5
+export PATH=$PATH:$MAVEN_HOME/bin
+[root@hadoop101 software]#source /etc/profile
+```
+
 ## mysql
 
 https://www.jianshu.com/p/1dab9a4d0d5f
@@ -177,10 +201,7 @@ mysql> show variables like 'character%';
 socket文件：/var/run/mysqld/mysqld.pid
 ```
 
-
-
 ```shell
-
 # 先检查系统是否装有mysql
 rpm -qa | grep mysql
 # 删除可用
@@ -502,7 +523,5 @@ server {
 http://www.nexusregistry.com
 ```
 
-```shell
 
-```
 

@@ -495,6 +495,8 @@ EXPOSE 8080
 CMD ["catalina.sh", "run"]
 
 [root@master tomcat]# docker build . -t tomcat:v1
+# docker tag tomcat:v1 192.168.0.84/library/tomcat:v1
+# docker push 192.168.0.84/library/tomcat:v1
 [root@master tomcat]# docker run -d -p 8081:8080 tomcat:v1
 http://192.168.0.31:8081/test/status.html
 ```
@@ -799,6 +801,70 @@ pipeline {
 http://192.168.0.33:89/
 
 # 安装数据库
+[root@hdss7-11 my.cnf.d]# rpm -qa |grep -i mysql
+mysql-community-common-5.7.30-1.el7.x86_64
+mysql-community-server-5.7.30-1.el7.x86_64
+mysql-community-libs-5.7.30-1.el7.x86_64
+mysql-community-libs-compat-5.7.30-1.el7.x86_64
+mysql57-community-release-el7-11.noarch
+mysql-community-client-5.7.30-1.el7.x86_64
+# 依次删除
+yum remove mysql-community-server-5.7.30-1.el7.x86_64
+...
+# 依次删除
+[root@hdss7-11 my.cnf.d]# find / -name mysql
+/etc/selinux/targeted/active/modules/100/mysql
+/etc/selinux/targeted/tmp/modules/100/mysql
+/var/lib/mysql
+/var/lib/mysql/mysql
+/usr/share/mysql
+[root@hdss7-11 my.cnf.d]# rm -rf /etc/selinux/targeted/active/modules/100/mysql
+...
+# 删除
+[root@hdss7-11 my.cnf.d]# rm -rf /etc/my.cnf
+[root@hdss7-11 my.cnf.d]# rm -rf /var/log/mysqld.log
+
+[root@hdss7-11 ~]# vi /etc/yum.repos.d/MariaDB.repo
+[mariadb]
+name = MariaDB
+baseurl = https://mirrors.ustc.edu.cn/mariadb/yum/10.1/centos7-amd64/
+gpgkey=https://mirrors.ustc.edu.cn/mariadb/yum/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+# 导入GPG-KEY
+[root@hdss7-11 ~]# rpm --import https://mirrors.ustc.edu.cn/mariadb/yum/RPM-GPG-KEY-MariaDB
+[root@hdss7-11 ~]# yum list mariadb --show-duplicates
+[root@hdss7-11 ~]# yum makecache
+[root@hdss7-11 ~]# yum list mariadb-server --show-duplicates
+[root@hdss7-11 ~]# yum install mariadb-server -y
+[root@hdss7-11 ~]# vi /etc/my.cnf.d/server.cnf
+[mysqld]
+character_set_server = utf8mb4
+collation_server = utf8mb4_general_ci
+init_connect = "SET NAMES 'utf8mb4'"
+[root@hdss7-11 my.cnf.d]# vi /etc/my.cnf.d/mysql-clients.cnf
+[mysql]
+default-character-set = utf8mb4
+[root@hdss7-11 my.cnf.d]# systemctl start mariadb
+[root@hdss7-11 my.cnf.d]# systemctl enable mariadb
+[root@hdss7-11 my.cnf.d]# mysqladmin -uroot password
+New password: root
+Confirm new password: root
+[root@hdss7-11 my.cnf.d]# mysql -uroot -p
+MariaDB [(none)]> \s
+Server characterset:	utf8mb4
+Db     characterset:	utf8mb4
+Client characterset:	utf8mb4
+Conn.  characterset:	utf8mb4
+MariaDB [(none)]> show databases;
+MariaDB [(none)]> drop database test;
+[root@hdss7-11 my.cnf.d]# ps aux|grep mysqld
+mysql    16678  0.1  7.1 807048 135044 ?       Ssl  17:24   0:00 /usr/sbin/mysqld
+root     16883  0.0  0.0 112824   980 pts/0    R+   17:28   0:00 grep --color=auto mysqld
+[root@hdss7-11 my.cnf.d]# ps aux|grep maria
+root     16893  0.0  0.0 112824   980 pts/0    S+   17:28   0:00 grep --color=auto maria
+[root@hdss7-11 my.cnf.d]# netstat -luntp|grep 3306
+tcp6       0      0 :::3306                 :::*                    LISTEN      16678/mysqld
+
 [root@slave2 maven]# yum install mariadb-server -y
 [root@slave2 maven]# systemctl start mariadb
 [root@slave2 maven]# mysqladmin -uroot password '123456'

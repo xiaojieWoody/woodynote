@@ -4,13 +4,36 @@
 
 ```shell
 docker pull mysql:5.7
-docker run --name mysql-dev -p 3306:3306 -v /Users/dingyuanjie/dev_env/docker_image_location/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.7
+docker run --name mysql-dev -p 3306:3306 -v /Users/dingyuanjie/dev_env/docker_image_location/mysql/tmp:/home/data/ -v /Users/dingyuanjie/dev_env/docker_image_location/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.7
 docker exec -it mysql-dev bash
 docker cp /Users/dingyuanjie/Downloads/algorithm_bmw.sql mysql-dev:/
 
 docker start mysql-dev
 docker exec -it mysql-dev mysql -uroot -p
 ```
+
+```shell
+echo "character-set-server=utf8" >> /etc/mysql/mysql.conf.d/mysqld.cnf
+
+/etc/mysql/my.cnf
+# !includedir /etc/mysql/conf.d/
+# ...
+[mysqld]
+datadir=/var/lib/mysql
+character-set-server=utf8
+default-character-set=utf8
+[mysql]
+default-character-set=utf8
+[client]
+default-character-set=utf8        
+              
+# 获取容器的IP地址         
+docker inspect --format '{{ .NetworkSettings.IPAddress }}' mysql-server         
+# 验证字符集
+mysql -h 172.17.0.2 -uroot -p -e "show variables like '%char%';"
+```
+
+
 
 ## Redis
 
@@ -140,7 +163,7 @@ http {
             # proxy_set_header   Host             $host;
             # proxy_set_header   X-Real-IP        $remote_addr;
             # proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
-	        # proxy_set_header   X-Forwarded-Proto  $scheme;
+	          # proxy_set_header   X-Forwarded-Proto  $scheme;
         }
         error_page   500 502 503 504  /50x.html;
         location = /50x.html {
@@ -231,12 +254,21 @@ yum install iproute -y
  docker images
  # 启动容器
  # /usr/sbin/sshd -D ——执行容器的/usr/sbin/sshd命令，-D将sshd作为前台进程运行，而不是脱离控制台成为后台守护进程
+# docker run -itd --name centos7-dev -p 10033:22 -p 10034:8080 -p 10035:8081 -v /Users/dingyuanjie/dev_env/docker_image_location/centos7/data:/root/data local/centos7.6 /usr/sbin/sshd -D 
  docker run -itd --name centos7-dev -p 10033:22 -v /Users/dingyuanjie/dev_env/docker_image_location/centos7/data:/root/data local/centos7.6 /usr/sbin/sshd -D
  # 进入centos容器内
  docker exec -it centos7-dev /bin/bash
  # 远程连接
  ssh root@localhost -p 10033
  123456
+ 
+ # vim中文乱码
+vim /etc/vimrc 
+# 该文件头上添加下面四行代码
+set fileencodings=utf-8,gb2312,gbk,gb18030
+set termencoding=utf-8
+set fileformats=unix
+set encoding=prc
 ```
 
 ## ubuntu18.04
@@ -259,11 +291,20 @@ ip a
 # 打包容器为镜像
 docker commit ubuntu18.04-tmp local/unbutu:18.04
  # 启动容器
-docker run -itd --name ubuntu-dev  -p 10034:22 -v /Users/dingyuanjie/dev_env/docker_image_location/ubuntu18.04/data:/root/data/ local/unbutu:18.04 /usr/sbin/sshd -D
+docker run -itd --name ubuntu18-dev  -p 10034:22 -v /Users/dingyuanjie/dev_env/docker_image_location/ubuntu18.04/data:/root/data/ local/unbutu:18.04 /usr/sbin/sshd -D
 # 进入容器内
- docker exec -it ubuntu-dev /bin/bash
+ docker exec -it ubuntu18-dev /bin/bash
 # 远程连接
 ssh root@localhost -p 10034
 123456
+```
+
+## 容器内安装软件
+
+```shell
+echo -e "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ buster main contrib non-free\ndeb https://mirrors.tuna.tsinghua.edu.cn/debian/ buster-updates main contrib non-free\ndeb https://mirrors.tuna.tsinghua.edu.cn/debian/ buster-backports main contrib non-free\ndeb https://mirrors.tuna.tsinghua.edu.cn/debian-security buster/updates main contrib non-free" >> /etc/apt/sources.list
+
+apt-get update
+apt-get install vim -y 
 ```
 

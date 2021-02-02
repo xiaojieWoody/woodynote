@@ -1476,6 +1476,13 @@ ResExportResultConciseBean resBean = (ResExportResultConciseBean)JSONObject.pars
     .collect(Collectors.toList());
   ```
 
+* groupingBy
+
+  ```java
+  // 按多个属性进行分组
+  Map<Pair<String, String>, List<Test>> collect = test.stream().collect(Collectors.groupingBy(t -> Pair.of(t.getNameA(), t.getNameB())));
+  ```
+
 * foreach设置属性值
 
   ```java
@@ -1654,7 +1661,8 @@ sString workspacePath = directory.getCanonicalPath(); //获取工作空间的绝
   JdbcTemplate.update(sql, id);
   // 修改
   String sql = "UPDATE t_student SET name = ?,age = ? WHERE id = ?"; 
-  Object[] params=new Object[]{stu.getName(),stu.getAge(),stu.getId()}; JdbcTemplate.update(sql, params);
+  Object[] params=new Object[]{stu.getName(),stu.getAge(),stu.getId()}; 
+  JdbcTemplate.update(sql, params);
   // 查询
   String sql = "SELECT * FROM t_student WHERE id=?"; 
   List<Student> list = JDBCTemplate.query(sql, id); 
@@ -1673,76 +1681,4 @@ sString workspacePath = directory.getCanonicalPath(); //获取工作空间的绝
   p.load(inputStream);
   p.getProperty("driverClassName");
   ```
-
-
-
-
-
-```java
-// 图片正常
-        InputStream fileStream = null;
-        File f = null;
-        ImportResInfoBean result = new ImportResInfoBean();
-        try {
-            fileStream = file.getInputStream();
-            //临时文件
-            Path path = Paths.get(System.getProperty("java.io.tmpdir"), file.getName() + UUID.randomUUID() + ".zip");
-            f = path.toFile();
-
-            OutputStream os = new FileOutputStream(f);
-            byte[] byte_ = new byte[fileStream.available()];
-            fileStream.read(byte_);
-            os.write(byte_);
-            os.close();
-
-            ZipInputStream zis = new ZipInputStream(new FileInputStream(f));
-            ZipEntry entry;
-            // 资源信息
-            ResExportResultConciseBean bean = null;
-            // 图片信息
-            List<FileImageInfoBean> fileImage = new ArrayList<>();
-            while ((entry = zis.getNextEntry()) != null) {
-                long size = entry.getSize();
-                if(size > 0) {
-                    ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
-                    String name = entry.getName();
-                    byte[] byte_s=new byte[1024];
-                    int num=-1;
-                    //通过read方法来读取文件内容
-                    while((num=zis.read(byte_s,0,byte_s.length))>-1){
-                        byteArrayOutputStream.write(byte_s,0,num);
-                    }
-                    byte[] bytes = byteArrayOutputStream.toByteArray();
-                    if(name.contains(".json")) {
-                        bean = JSON.parseObject(bytes, ResExportResultConciseBean.class);
-                    } else {
-                        // 处理图片文件
-                        FileImageInfoBean fileInfo = new FileImageInfoBean();
-                        fileInfo.setFileId(name);
-                        fileInfo.setImage(bytes);
-                        fileImage.add(fileInfo);
-                    }
-                }
-            }
-            result.setImageInfoList(fileImage);
-            result.setResInfo(bean);
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("解析资源zip文件异常......", e);
-        } finally {
-            try {
-                if(fileStream != null) {
-                    //关闭流
-                    fileStream.close();
-                }
-                //删除临时文件
-                org.apache.commons.io.FileUtils.deleteQuietly(f);
-            } catch (IOException e) {
-                e.printStackTrace();
-                log.error("关闭IO流异常......", e);
-            }
-        }
-        return result;
-    }
-```
 

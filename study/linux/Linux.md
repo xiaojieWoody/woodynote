@@ -1,3 +1,155 @@
+* swap分区
+
+  * Linux内核为了提高读写效率与速度，会将文件在内存中进行缓存，这部分内存就是Cache Memory(缓存内存)。即使你的程序运行结束后，Cache Memory也不会自动释放。这就会导致你在Linux系统中程序频繁读写文件后，你会发现可用物理内存变少。当系统的物理内存不够用的时候，就需要将物理内存中的一部分空间释放出来，以供当前运行的程序使用。那些被释放的空间可能来自一些很长时间没有什么操作的程序，这些被释放的空间被临时保存到Swap空间中，等到那些程序要运行时，再从Swap分区中恢复保存的数据到内存中。这样，系统总是在物理内存不够时，才进行Swap交换
+  * free -m
+  * Swap交换分区的性能依然比不上物理内存，目前的服务器上RAM基本上都相当充足，那么是否可以考虑抛弃Swap交换分区，是否不需要保留Swap交换分区呢
+
+* yaml
+
+  * 语法规则
+
+    * 大小写敏感
+    * 使用缩紧表示层级关系
+    * 缩进时不允许使用Tab键，只允许使用空格
+    * 缩进的空格数目不重要，只要相同层级的元素左侧对齐即可
+    * `#` ，表示注释，从这个字符一直到行尾，都会被解析器忽略
+
+  * 支持的数据结构
+
+    * 对象：键值对的集
+
+      ```shell
+      animal: pets
+      # 转为 JavaScript 如下
+      { animal: 'pets' }
+      
+      hash: { name: Steve, foo: bar }
+      # 转为 JavaScript 如下
+      { hash: { name: 'Steve', foo: 'bar' } }
+      ```
+
+    * 数组：一组连词线开头的行，构成一个数组
+
+      ```shell
+      - Cat
+      - Dog
+      - Goldfish
+      # 转为 JavaScript 如下
+      [ 'Cat', 'Dog', 'Goldfish' ]
+      
+      # 数据结构的子成员是一个数组，则可以在该项下面缩进一个空格
+      -
+       - Cat
+       - Dog
+       - Goldfish
+      # 转为 JavaScript 如下
+      [ [ 'Cat', 'Dog', 'Goldfish' ] ]
+      
+      # 数组也可以采用行内表示法
+      animal: [Cat, Dog]
+      # 转为 JavaScript 如下
+      { animal: [ 'Cat', 'Dog' ] }
+      ```
+
+    * 纯量：单个的，不可再分的值
+
+      ```shell
+      字符串、布尔值、整数、浮点数、Null、时间、日期
+      # null用~表示
+      parent: ~ 
+      # YAML 允许使用两个感叹号，强制转换数据类型
+      e: !!str 123
+f: !!str true
+      # 转为 JavaScript 如下
+      { e: '123', f: 'true' }
+      
+      # 字符串
+      # 如果字符串之中包含空格或特殊字符，需要放在引号之中
+      str: '内容： 字符串'
+      # 单引号和双引号都可以使用，双引号不会对特殊字符转义
+      # 单引号之中如果还有单引号，必须连续使用两个单引号转义
+      str: 'labor''s day' 
+      # 字符串可以写成多行，从第二行开始，必须有一个单空格缩进。换行符会被转为空格
+      str: 这是一段
+        多行
+        字符串
+      # 转为 JavaScript 如下
+      { str: '这是一段 多行 字符串' }
+      
+      # 多行字符串可以使用|保留换行符，也可以使用>折叠换行
+      this: |
+        Foo
+        Bar
+      that: >
+        Foo
+        Bar
+      # 转为 JavaScript 如下
+      { this: 'Foo\nBar\n', that: 'Foo Bar\n' }
+      
+      # +表示保留文字块末尾的换行，-表示删除字符串末尾的换行
+      s1: |
+        Foo
+      
+      s2: |+
+        Foo
+      
+      
+      s3: |-
+        Foo
+      # 转为 JavaScript 代码如下
+      { s1: 'Foo\n', s2: 'Foo\n\n\n', s3: 'Foo' }
+      
+      # 字符串之中可以插入 HTML 标记
+      message: |
+      
+        <p style="color: red">
+          段落
+        </p>
+      # 转为 JavaScript 代码如下
+      { message: '\n<p style="color: red">\n  段落\n</p>\n' }
+      ```
+      
+      ```shell
+      # 引用
+      # 锚点&和别名*，可以用来引用
+      defaults: &defaults
+        adapter:  postgres
+        host:     localhost
+      
+      development:
+        database: myapp_development
+        <<: *defaults
+      
+      test:
+        database: myapp_test
+        <<: *defaults
+      
+      # 等同于下面的代码
+      defaults:
+        adapter:  postgres
+        host:     localhost
+      
+      development:
+        database: myapp_development
+        adapter:  postgres
+        host:     localhost
+      
+      test:
+        database: myapp_test
+        adapter:  postgres
+        host:     localhost
+      
+      # &用来建立锚点（defaults），<<表示合并到当前数据，*用来引用锚点
+      
+      - &showell Steve 
+      - Clark 
+      - Brian 
+      - Oren 
+      - *showell 
+      # 转为 JavaScript 代码如下
+      [ 'Steve', 'Clark', 'Brian', 'Oren', 'Steve' ]
+      ```
+
 # 常用命令
 
 ```shell
@@ -207,6 +359,8 @@ o				# 【光标下一行插入一行】
 Ctrl-f  # 【向前滚动一页】
 Ctrl-b  # 【向后滚动一页】
 
+:n          # 移动到第 n 行
+
 :%s/vivian/sky/						#【替换每一行的第一个 vivian 为 sky】
 :%s/vivian/sky/g					#【替换每一行中所有 vivian 为 sky】
 
@@ -338,7 +492,7 @@ tail -10 test.txt > test1.txt # test.txt中最后10行添加到test1.txt中
 tail -f test.txt    # 动态打印
 
 # head
-head -10 test.txt   # 最前面10行打印出来
+head -10 test.tnxt   # 最前面10行打印出来
 
 # echo
 echo "test111" >>test.txt     # 文件中追加内容
@@ -464,192 +618,11 @@ chkconfig vsftpd on
 chkconfig vsftpd off
 ```
 
-![image-20200104120925920](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200104120925920.png)
 
-### 搭建自己的gitlab
 
-* [官网](https://about.gitlab.com/install/#centos-7 )
 
-1. 说明：安装gitlab的机器至少要有4G的内存，因为gitlab比较消耗内存 
 
-2. 安装必要的依赖
 
-   ```shell
-   sudo yum install -y curl policycoreutils-python openssh-server 
-   sudo systemctl enable sshd
-   sudo systemctl start sshd
-   sudo firewall-cmd --permanent --add-service=http
-   sudo systemctl reload firewalld
-   ```
 
-3. 如果想要发送邮件，就跑一下下面的内容 
 
-   ```shell
-   sudo yum install postfix
-   sudo systemctl enable postfix
-   sudo systemctl start postfix
-   ```
 
-4. 添加gitlab的仓库地址 
-
-   ```shell
-   https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.rpm.sh|sudo bash
-   # 注意:这个下载仓库可能速度会很慢，此时可以用国内的仓库地址
-   # 新建文件 /etc/yum.repos.d/gitlab-ce.repo 内容为
-   [gitlab-ce]
-   name=Gitlab CE Repository baseurl=https://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el$releasever/ gpgcheck=0
-   enabled=1
-   ```
-
-5. 设置gitlab的域名和安装gitlab 
-
-   ```shell
-   sudo EXTERNAL_URL="https://gitlab.itcrazy2016.com" yum install -y gitlab-ee
-   # 如果用的是国内仓库地址，则执行以下命令，其实区别就是ee和ec版
-   sudo EXTERNAL_URL="https://gitlab.itcrazy2016.com" yum install -y gitlab-ce
-   # 此时要么买个域名，要么在本地的hosts文件中设置一下
-   # 安装gitlab服务器的ip地址 gitlab.itcrazy2016.com
-   # 假如不想设置域名，可以直接安装yum install -y gitlab-ee
-   ```
-
-6. 重新configure
-
-   ```shell
-   # 如果没有成功，可以运行gitlab-ctl reconfigure
-   ```
-
-7. 查看gitlab运行的情况
-
-   ```shell
-   # gitlab-ctl status可以看到运行gitlab服务所需要的进程
-   ```
-
-8. 访问
-
-   * 浏览器输入gitlab.itcrazy2016.com，此时需要修改root账号的密码 
-
-9. 配置已经安装好的gitlab 
-
-   ```shell
-   vim /etc/gitlab/gitlab.rb
-   # 修改完成之后一定要gitlab-ctl reconfigure
-   ```
-
-### Hadoop
-
-```shell
-# hadoop 50070 无法访问问题解决汇总
-https://www.cnblogs.com/zlslch/p/6604189.html
-vi /etc/selinux/config 
-SELINUX=enforcing 改为 SELINUX=disabled
-http://192.168.0.122:50070/dfshealth.html#tab-overview
-```
-
-### 配置Maven
-
-```shell
-[root@hadoop101 software]# tar -zxvf apache-maven-3.0.5-bin.tar.gz -C /opt/module/
-[root@hadoop101 apache-maven-3.0.5]# vi conf/settings.xml
-```
-
-```xml
-<mirror>
-  <id>nexus-aliyun</id>
-  <mirrorOf>central</mirrorOf>
-  <name>Nexus aliyun</name>
-  <url>http://maven.aliyun.com/nexus/content/groups/public</url>
-</mirror>
-```
-
-```shell
-[root@hadoop101 apache-maven-3.0.5]# vi /etc/profile
-#MAVEN_HOME
-export MAVEN_HOME=/opt/module/apache-maven-3.0.5
-export PATH=$PATH:$MAVEN_HOME/bin
-[root@hadoop101 software]#source /etc/profile
-```
-
-### 配置ANT
-
-```shell
-[root@hadoop101 software]# tar -zxvf apache-ant-1.9.9-bin.tar.gz -C /opt/module/
-[root@hadoop101 apache-ant-1.9.9]# vi /etc/profile
-#ANT_HOME
-export ANT_HOME=/opt/module/apache-ant-1.9.9
-export PATH=$PATH:$ANT_HOME/bin
-[root@hadoop101 software]#source /etc/profile
-# 验证命令：ant -version
-```
-
-### 配置环境变量
-
-```shell
-echo $PATH
-pwd
-vi /etc/profile
-	export JAVA_HOME=/opt/jdk
-	export HADOOP_HOME=/usr/local/bgdt/hadoop-2.8.5
-	export PATH=.:$PATH:$HADOOP_HOME/bin:$JAVA_HOME/bin:$HADOOP_HOME/sbin
-source /etc/profile
-# 例子
-# 添加可执行权限
-chmod +x helloworld.sh
-# 当前目录 helloworld.sh就会直接执行，因为在环境变量中配置了在当前目录下查找并执行(.)
-```
-
-### 集群时间同步
-
-* 时间同步的方式：找一个机器，作为时间服务器，所有的机器与这台集群时间进行定时的同步，比如，每隔十分钟，同步一次时间
-
-![image-20191127161635207](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20191127161635207.png)
-
-1. 时间服务器配置（必须root用户）
-
-   ```shell
-   # 检查ntp是否安装
-   [root@hadoop102 桌面]# rpm -qa|grep ntp
-   # 修改ntp配置文件
-   [root@hadoop102 桌面]# vi /etc/ntp.conf
-   # 修改1（授权192.168.1.0-192.168.1.255网段上的所有机器可以从这台机器上查询和同步时间）
-   #restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap为
-   restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap
-   # 修改2（集群在局域网中，不使用其他互联网上的时间）
-   server 0.centos.pool.ntp.org iburst
-   server 1.centos.pool.ntp.org iburst
-   server 2.centos.pool.ntp.org iburst
-   server 3.centos.pool.ntp.org iburst为
-   #server 0.centos.pool.ntp.org iburst
-   #server 1.centos.pool.ntp.org iburst
-   #server 2.centos.pool.ntp.org iburst
-   #server 3.centos.pool.ntp.org iburst
-   # 添加3（当该节点丢失网络连接，依然可以采用本地时间作为时间服务器为集群中的其他节点提供时间同步）
-   server 127.127.1.0
-   fudge 127.127.1.0 stratum 10
-   # 修改/etc/sysconfig/ntpd 文件
-   [root@hadoop102 桌面]# vim /etc/sysconfig/ntpd
-   # 增加内容如下（让硬件时间与系统时间一起同步）
-   SYNC_HWCLOCK=yes
-   # 重新启动ntpd服务
-   [root@hadoop102 桌面]# service ntpd status
-   ntpd 已停
-   [root@hadoop102 桌面]# service ntpd start
-   正在启动 ntpd：
-   # 设置ntpd服务开机启动
-   [root@hadoop102 桌面]# chkconfig ntpd on
-   ```
-
-2. 其他机器配置（必须root用户）
-
-   ```shell
-   # 在其他机器配置10分钟与时间服务器同步一次
-   [root@hadoop103桌面]# crontab -e
-   # 编写定时任务如下：
-   */10 * * * * /usr/sbin/ntpdate hadoop102
-   # 修改任意机器时间
-   [root@hadoop103桌面]# date -s "2017-9-11 11:11:11"
-   # 十分钟后查看机器是否与时间服务器同步
-   [root@hadoop103桌面]# date
-   # 说明：测试的时候可以将10分钟调整为1分钟，节省时间。
-   ```
-
-   

@@ -4,8 +4,6 @@
   * Spring MVC是Spring的一个模块，一个web框架，提供了一种轻度耦合的方式来开发web应用
   * SpringBoot基于Spring实现自动配置，降低项目搭建的复杂度
 
-# 经验
-
 
 
 # Spring
@@ -89,30 +87,6 @@ public class OperationLogAOP {
         // 插入数据库
     }
 }
-```
-
-## List入参
-
-```java
-@PostMapping("/list")
-@ResponseBody
-public ResponseResult testList(@RequestBody List<ResAuthEveVO> list) {
-  String str = JSON.toJSONString(list);
-  return new ResponseResult(200, "123", "success", str);
-}
-
-@Data
-public class ResAuthEveVO implements Serializable {
-    private static final long serialVersionUID = -5197769504649608422L;
-    private Integer sge;
-    private Integer bty;
-}
-```
-
-```java
-post http://127.0.0.1:18471//list
-Headers Content-Type:application/json
-[{"sge":1,"bty":2},{"sge":3,"bty":4}]
 ```
 
 # SpringCloud

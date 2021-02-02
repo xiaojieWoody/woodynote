@@ -1,4 +1,6 @@
 ```shell
+alter table `job_task_event` add id int not null primary key Auto_increment  first;
+
 # 添加索引
 alter table tableName add primary key(id)
 ```

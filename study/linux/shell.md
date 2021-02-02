@@ -7,6 +7,8 @@ sed -n '/\[mysqld\]/,/\[.*\]/p' my.cnf | grep -v ^# | grep -v ^$ | grep -v "\[.*
 # 正则表达式
 ```
 
+![image-20201010093756766](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20201010093756766.png)
+
 # 目标
 
 * 基本监控系统脚本编写（CPU、内存、IO等）

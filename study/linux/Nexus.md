@@ -52,9 +52,21 @@ curl -ikL -X GET -u admin:Harbor12345 http://192.168.0.35/service/token\?account
 # 根据token获取image的tags
 curl -ikL -X GET -H "Content-Type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1Q..." http://192.168.0.35/v2/library/nginx/tags/list
 
+# /v2/{imageName}/tags/list
+
 # Nexus API
 # 根据name获取相关信息
 curl -u admin:111111 -X GET "http://192.168.0.35:8081/service/rest/v1/search?repository=docker-hosted&format=docker&name=openthings/busybox"
 curl -u admin:111111 -X GET "http://192.168.0.35:8081/service/rest/v1/search?name=test/nginx"
+
+curl -u sw_sage-prd-s:l8J8*b0 -X GET "https://nexus-shared.addpchina.com/service/rest/v1/search?name={imageName}"
+
+curl -u sw_sage-prd-s:l8J8*b0 -X GET "https://nexus-shared.addpchina.com/service/rest/v1/search?repository={}&format=docker&name={imageName}"
+
+# /service/rest/v1/search?name={imageName}
 ```
+
+
+
+
 

@@ -62,11 +62,11 @@
 
 ![image-20200628214719155](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20200628214719155.png)
 
-* 低层技术支持
+* ==低层技术支持==
   * Namespaces：做隔离pid，net，ipc，mnt，uts
   * Control groups：做资源限制
   * Union file systems：Container和image的分层
-* 什么是Image
+* ==什么是Image==
   * 文件和meta data的集合（root filesystem）
   * 分层的，并且每一层都可以添加改变，删除文件，成为一个新的image
   * 不同的image可以共享相同的layer
@@ -94,7 +94,8 @@
     docker pull ubuntu:18.04
     ```
 
-* 什么是Container
+* ==什么是Container==
+  
   * 通过Image创建（copy）
   * 在Image layer之上建立一个container layer（可读写）
   * 类比面向对象：类和实例

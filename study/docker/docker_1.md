@@ -15,7 +15,7 @@ docker rm -f $(docker ps -aq)
 * **容器就是将软件打包成标准化单元，以用于开发、交付和部署**
 
 * **Docker 属于 Linux 容器的一种封装，提供简单易用的容器使用接口。**它是目前最流行的 Linux 容器解决方案
-* Docker 将应用程序与该程序的依赖，打包在一个文件里面。运行这个文件，就会生成一个虚拟容器。程序在这个虚拟容器里运行，就好像在真实的物理机上运行一样。有了 Docker，就不用担心环境问题。
+* ==Docker 将应用程序与该程序的依赖，打包在一个文件里面。运行这个文件，就会生成一个虚拟容器。程序在这个虚拟容器里运行，就好像在真实的物理机上运行一样。有了 Docker，就不用担心环境问题。==
 * 总体来说，Docker 的接口相当简单，用户可以方便地创建和使用容器，把自己的应用放入容器。容器还可以进行版本管理、复制、分享、修改，就像管理普通的代码一样
 * 由于Linux容器是进程级别的，相比虚拟机有很多优势
   * 启动快
@@ -99,14 +99,14 @@ docker rm -f $(docker ps -aq)
 
 * [虚拟机中安装docker](https://docs.docker.com/install/linux/docker-ce/centos/)
 
-## Docker常用命令
+## ==Docker常用命令==
 
 ```shell
 # 案例
 # 查看容器
 docker ps
 # 创建mysql容器
-	docker run -d --name my-mysql -p 3301:3306 -e MYSQL_ROOT_PASSWORD=jack123 --privileged mysql
+docker run -d --name my-mysql -p 3301:3306 -e MYSQL_ROOT_PASSWORD=jack123 --privileged mysql
 # 进入到某个容器中并交互式运行
 docker exec -it containerid /bin/bash
 # 构建镜像
@@ -120,6 +120,7 @@ docker rm -f $(docker ps -aq)
 
 -name			设置容器名称
 -d				后台运行
+-t        终端
 -p				宿主端口:容器端口
 -e				设置参数
 -i				交互式运行
@@ -131,7 +132,7 @@ docker rm -f $(docker ps -aq)
 
 ## Dockerfile
 
-### 基本语法
+### ==基本语法==
 
 * `FROM`
 
@@ -1279,16 +1280,10 @@ docker stop/start container
 
   3. 访问测试
 
-## 详解docker-compose.yml文件
+## ==详解docker-compose.yml文件==
 
 ```shell
-1. version: '3', 表示docker-compose的版本
-2. services, 一个service表示一个container
-3. networks, 相当于docker network create app-net
-4. volumes, 相当于-v v1:/var/lib/mysql
-5. image, 表示使用哪个镜像，本地build则用build，远端则用image
-6. ports, 相当于-p 8080:8080
-7. environment, 相当于-e 
+s
 ```
 
 ## docker-compose常见操作

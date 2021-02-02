@@ -332,9 +332,9 @@ server{
 * ==ip_hash==
   
     - ==根据请求的ip地址进行hash值来做转发==
-  
+    
     - ==每个请求按访问IP的哈希结果分配，使来自同一个IP的访客固定访问一台后端服务器，并且可以有效解决动态网页存在的session共享问题==
-  
+    
       ```shell
       upstream bakend {  
     	ip_hash;  

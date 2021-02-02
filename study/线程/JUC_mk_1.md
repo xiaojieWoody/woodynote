@@ -1498,6 +1498,7 @@ class PrintQueue {
           new Thread(() -> bookSeat()).start();
       }
   }
+  ```
 ```
   
   ```java
@@ -1563,7 +1564,7 @@ class PrintQueue {
           }
       }
   }
-  ```
+```
 
 ## 是否可中断
 
@@ -1666,8 +1667,8 @@ class PrintQueue {
             t2.start();
             t1.join();
             t2.join();
-            System.out.println("原子类的结果：" + atomicInteger.get());
-            System.out.println("普通变量的结果：" + basicCount);
+            System.out.println("原子类的结果：" + atomicInteger.get());    // 20000
+            System.out.println("普通变量的结果：" + basicCount);           
         }
     
         @Override
@@ -1773,6 +1774,54 @@ class PrintQueue {
 * AtomicStampedReference——加上了时间戳，防止ABA问题
   * 刚才说到了AtomicReference会带来ABA问题，而AtomicStampedReference的诞生，就是解决了这个问题
 
+```java
+import java.util.concurrent.atomic.AtomicReference;
+
+/**
+ * 描述：     自旋锁
+ */
+public class SpinLock {
+
+    private AtomicReference<Thread> sign = new AtomicReference<>();
+
+    public void lock() {
+        Thread current = Thread.currentThread();
+        while (!sign.compareAndSet(null, current)) {
+            System.out.println("自旋获取失败，再次尝试");
+        }
+    }
+
+    public void unlock() {
+        Thread current = Thread.currentThread();
+        sign.compareAndSet(current, null);
+    }
+
+    public static void main(String[] args) {
+        SpinLock spinLock = new SpinLock();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println(Thread.currentThread().getName() + "开始尝试获取自旋锁");
+                spinLock.lock();
+                System.out.println(Thread.currentThread().getName() + "获取到了自旋锁");
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    spinLock.unlock();
+                    System.out.println(Thread.currentThread().getName() + "释放了自旋锁");
+                }
+            }
+        };
+        Thread thread1 = new Thread(runnable);
+        Thread thread2 = new Thread(runnable);
+        thread1.start();
+        thread2.start();
+    }
+}
+```
+
 ## 把普通变量升级为原子类：用AtomicIntegerFieldUpdater升级原有变量
 
 * 概述
@@ -1830,14 +1879,15 @@ class PrintQueue {
 * 注意点
   * 第一，Updater只能修改它可见范围内的变量。因为Updater使用反射得到这个变量。如果变量不可见，就会出错。比如如果 score申明为 private， 就是不可行的。 
   * 第二，为了确保变量被正确的读取，它必须是volatile类型的。如果我们原有代码中未申明这个类型，那么简单地申明一下就 行， 这不 会 引起 什么 问题。 
-  * 第三，	由于 CAS 操作 会 通过 对象 实例 中的 偏移量 直接进行 赋值， 因此， 它不 支持 static 字段（ Unsafe. objectFieldOffset() 不支持 静态 变量）
+  * 第三，由于 CAS 操作 会 通过 对象 实例 中的 偏移量 直接进行 赋值， 因此， 它不 支持 static 字段（ Unsafe. objectFieldOffset() 不支持静态变量）
 
-## Adder累加器
+## ==Adder累加器==
 
 * 介绍
   * 是Java 8引入的，相对是比较新的一个类。
   * 高并发下LongAdder比AtomicLong效率高，不过本质是空间换时间。
   * Atomic遇到的问题是，适合用在低并发场景，否则在高并发下，由于CAS的冲突机会大，会导致经常自旋，影响整体效率。而LongAdder引入了分段锁的概念，当竞争不激烈的时候，所有线程都是通过CAS对同一个变量（Base）进行修改，但是等到了竞争激烈的时候，LongAdder把不同线程对应到不同的Cell上进行修改，降低了冲突的概率，是多段锁的理念，提高了并发性
+  
 * 演示AtomicLong的问题
   * 这里演示多线程情况下AtomicLong的性能，有16个线程对同一个AtomicLong累加。
   
@@ -1931,7 +1981,13 @@ class PrintQueue {
         }
     }
     ```
+  
 * LongAdder带来的改进和原理
+  
+  ![image-20201009215633157](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20201009215633157.png)
+  
+  ![image-20201009215702930](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20201009215702930.png)
+  
   * 在内部，这个LongAdder的实现原理和刚才的AtomicLong是有不同的，刚才的AtomicLong的实现原理是，每一次加法都需要做同步，所以在高并发的时候会导致冲突比较多，也就降低了效率
   * 而此时的LongAdder，每个线程会有自己的一个计数器，仅用来在自己线程内计数，这样一来就不会和其他线程的计数器干扰。
   * 如图中所示，第一个线程的计数器数值，也就是ctr’，为1的时候，可能线程2的计数器ctr’’的数值已经是3了，他们之间并不存在竞争关系,所以在加和的过程中，根本不需要同步机制，也不需要刚才的flush和refresh。这里也没有一个公共的counter来给所有线程统一计数。
@@ -1942,7 +1998,7 @@ class PrintQueue {
   * 当我们执行sum函数的时候，LongAdder会把所有线程的计数器，也就是ctr’和ctr’’等等都在同步的情况下加起来，形成最终的总和：
   * AtomicLong在多线程的情况下，每次都要同步，而LongAdder仅在最后sum的时候需要同步，其他情况下，多个线程可以同时运行，这就是LongAdder的吞吐量比AtomicLong大的原因，本质是空间换时间
   * 对比AtomicLong和LongAdder
-  * 在低争用下，AtomicLong和LongAdder这两个类具有相似的特征。但是在竞争激烈的情况下，LongAdder的预期吞吐量要高得多，但要消耗更多的空间
+    * 在低争用下，AtomicLong和LongAdder这两个类具有相似的特征。但是在竞争激烈的情况下，LongAdder的预期吞吐量要高得多，但要消耗更多的空间
     * LongAdder适合的场景是统计求和计数的场景，而且LongAdder基本只提供了add方法，而AtomicLong还具有cas方法
 
 ## Accumulator累加器
@@ -2014,6 +2070,11 @@ class PrintQueue {
   }
   ```
 
+
+## 案例演示
+
+* 两个线程竞争，其中一个落败
+
   ```java
   import java.util.concurrent.ConcurrentHashMap;
   import java.util.concurrent.atomic.AtomicInteger;
@@ -2053,9 +2114,6 @@ class PrintQueue {
   }
   ```
 
-## 案例演示
-
-* 两个线程竞争，其中一个落败
 * 用CAS思想实现的计数器
 
 ## 应用场景
@@ -2067,10 +2125,10 @@ class PrintQueue {
 ## 以AtomicInteger为例，分析在Java中是如何利用CAS实现原子操作的？
 
 * AtomicInteger加载Unsafe工具，用来直接操作内存数据
-* Unsafe类
+* 用Unsafe类来实现底层操作
   * Unsafe是CAS的核心类。Java无法直接访问底层操作系统，而是通过本地（native）方法来访问。不过尽管如此，JVM还是开了一个后门，JDK中有一个类Unsafe，它提供了硬件级别的原子操作。
   * valueOffset表示的是变量值在内存中的偏移地址，因为Unsafe就是根据内存偏移地址获取数据的原值的，这样我们就能通过unsafe来实现CAS了。
-  * value是用volatile修饰的，保证了多线程之间看到的value值是同一份。
+* value是用volatile修饰的，保证了多线程之间看到的value值是同一份。
 * getAndAdd方法
 * Unsafe类中的compareAndSwapInt方法
   * 方法中先想办法拿到变量value在内存中的地址。
@@ -2440,31 +2498,92 @@ public class FinalStringDemo2 {
 
 ## CopyOnWriteArrayList
 
-## 9-16
-
 * 诞生的历史和原因
+  
+  * 代替Vector和SynchronizedList，就和ConcurrentHashMap代替SynchronizedMap的原因一样
   * Vector和SynchronizedList的锁的粒度太大，并发效率相对比较低，并且迭代时无法编辑
+  * Copy-On-Write并发容器还包括CopyOnWriteArraySet，用来替代同步Set
+  
 * 适用场景
   * 读操作可以尽可能地快，而写即使慢一些也没有太大关系
   * 读多写少
     * 黑名单，每日更新
     * 监听器：迭代操作远多余修改操作
+  
 * 读写规则
   * 回顾读写锁
     * 读读共享、其他都互斥（写写互斥、读写互斥、写读互斥）
   * 读写锁规则的升级
     * 读取是完全不用加锁的，并且更厉害的是：写入也不会阻塞读取操作。只有写入和写入之间需要进行同步等待
+  
 * 代码演示
+
+  ```java
+  /**
+   * 描述：演示CopyOnWriteArrayList可以在迭代的过程中修改数组内容，但是ArrayList不行，对比
+   */
+  public class CopyOnWriteArrayListDemo1 {
+  
+      public static void main(String[] args) {
+          ArrayList<String> list = new ArrayList<>();
+  //        CopyOnWriteArrayList<String> list = new CopyOnWriteArrayList<>();
+  
+          list.add("1");
+          list.add("2");
+          list.add("3");
+          list.add("4");
+          list.add("5");
+  
+          Iterator<String> iterator = list.iterator();
+  
+          while (iterator.hasNext()) {
+              System.out.println("list is" + list);
+              String next = iterator.next();
+              System.out.println(next);
+  
+              if (next.equals("2")) {
+                  list.remove("5");
+              }
+              if (next.equals("3")) {
+                  list.add("3 found");
+              }
+          }
+      }
+  }
+  ```
+
+  ```java
+  /**
+   * 描述：     对比两个迭代器
+   */
+  public class CopyOnWriteArrayListDemo2 {
+  
+      public static void main(String[] args) throws InterruptedException {
+          CopyOnWriteArrayList<Integer> list = new CopyOnWriteArrayList<>(new Integer[]{1, 2, 3});
+          System.out.println(list);
+          Iterator<Integer> itr1 = list.iterator();
+          list.remove(2);
+          Thread.sleep(1000);
+          System.out.println(list);
+          Iterator<Integer> itr2 = list.iterator();
+          itr1.forEachRemaining(System.out::println);
+          itr2.forEachRemaining(System.out::println);
+      }
+  }
+  ```
+
 * 实现原理
   * CopyOnWrite的含义
-  * 创建新副本、读写分离
-  * “不可变”原理
-  * 迭代的时候
+  * 创建新副本、读写分离（使用不同容器）
+  * “不可变”原理（旧的不可变）
+  * 迭代的时候（迭代器使用的旧的）
+  
 * 缺点
   * 内存占用问题
     * 因为CopyOnWrite的写是复制机制，所以在进行写操作的时候，内存里会同时驻扎两个对象的内存。
   * 数据一致性问题
     * CopyOnWrite容器只能保证数据的最终一致性，不能保证数据的实时一致性。所以如果你希望写入的的数据，马上能读到，请不要使用CopyOnWrite容器。
+  
 * 源码分析
   * 数据结构
     * 底层是数组
@@ -2480,23 +2599,118 @@ public class FinalStringDemo2 {
 * 为什么要使用队列
   * 用队列可以安全地在线程间传递数据：生产者消费者模式、银行转账
   * 考虑锁等线程安全问题的重任从“你”转移到了“队列”上
+  
 * 并发队列简介
   * Queue
   * BlockingQueue
+  
 * 各并发队列关系图
+  
+  ![image-20201010082326363](/Users/dingyuanjie/Documents/study/github/woodyprogram/img/image-20201010082326363.png)
+  
   * 彩蛋：画漂亮的UML图
-* ArrayBlockingQueue
-  * 有界
-  * 指定容量
-  * 公平
+  
+* 什么是阻塞队列
+
+  * 简介、地位
+    * 阻塞队列是具有阻塞功能的队列，所以它首先是一个队列。其次是具有阻塞功能
+    * 通常，阻塞队列的一端是给生产者放数据用，另一端给消费者拿数据用。阻塞队列是线程安全的，所以生产者和消费者都可以是多线程的
+    * 阻塞功能：最有特色的两个带有阻塞功能的方法是
+      * take()方法：获取并移除队列的头结点，一旦如果执行take的时候，队列里无数据，则阻塞，直到队列里有数据
+      * put()方法：插入元素。但是如果队列已满，那么就无法继续插入，则阻塞，直到队列里有了空闲空间
+      * 是否有界（容量有多大）：这是一个非常重要的属性，无界队列意味着里面可以容纳非常多（Integer.MAX_VALUE，约为2的31次，是非常大的一个数，可以近似认为是无限容量）
+      * 阻塞队列和线程池的关系：阻塞队列是线程池的重要组成部分
+
+* BlockingQueue主要方法
+  
+  * put、take
+  * add、remove、element
+  * offer、poll、peek
+  
+* ArrayBlockingQueue 
+  
+  * 有界、指定容量、公平
+    * 有10个面试者，一共只有1个面试官，大厅里有3个位子供面试者休息，每个人的面试时间是10秒，模拟所有人面试的场景
+    * 源码分析：put方法
+  
+  ```java
+  /**
+   * 描述：     TODO
+   */
+  public class ArrayBlockingQueueDemo {
+      public static void main(String[] args) {
+          ArrayBlockingQueue<String> queue = new ArrayBlockingQueue<String>(3);
+          Interviewer r1 = new Interviewer(queue);
+          Consumer r2 = new Consumer(queue);
+          new Thread(r1).start();
+          new Thread(r2).start();
+      }
+  }
+  
+  class Interviewer implements Runnable {
+      BlockingQueue<String> queue;
+      public Interviewer(BlockingQueue queue) {
+          this.queue = queue;
+      }
+      @Override
+      public void run() {
+          System.out.println("10个候选人都来啦");
+          for (int i = 0; i < 10; i++) {
+              String candidate = "Candidate" + i;
+              try {
+                  queue.put(candidate);
+                  System.out.println("安排好了" + candidate);
+              } catch (InterruptedException e) {
+                  e.printStackTrace();
+              }
+          }
+          try {
+              queue.put("stop");
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+      }
+  }
+  
+  class Consumer implements Runnable {
+      BlockingQueue<String> queue;
+      public Consumer(BlockingQueue queue) {
+          this.queue = queue;
+      }
+      @Override
+      public void run() {
+          try {
+              Thread.sleep(1000);
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+          String msg;
+          try {
+              while(!(msg = queue.take()).equals("stop")){
+                  System.out.println(msg + "到了");
+              }
+              System.out.println("所有候选人都结束了");
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+      }
+  }
+  ```
+  
+  
+  
 * LinkedBlockingQueue
   * 无界
-    * 容量Integer.MAX_VALUE
+  * 容量Integer.MAX_VALUE
+  * 内部结构：Node、两把锁
+  * 分析put方法
+
 * PriorityBlockingQueue
   * 支持优先级
   * 自然顺序（而不是先进先出）
   * 无界队列
   * PriorityQueue 的线程安全版本
+  
 * SynchronousQueue
   * 功能
     * SynchronousQueue首先是一个阻塞队列，然后不同之处在于，它的容量为0 ，所以没有一个地方来暂存元素，导致每次取数据都要先阻塞，直到有数据被放入；同理，每次放数据的时候也会阻塞，直到有消费者来取。
@@ -2507,8 +2721,15 @@ public class FinalStringDemo2 {
     2. 同理，没有iterate相关方法。
     3. 是一个极好的用来直接传递的并发数据结构。
     4. SynchronousQueue是线程池Executors.newCachedThreadPool()使用的阻塞队列
+  
+* DelayQueue
+  * 延迟队列，根据延迟时间排序
+  * 元素需要实现Delayed接口，规定排序规则 
+  
 * 非阻塞队列ConcurrentLinkedQueue
+  
   * 并发包中的非阻塞队列只有ConcurrentLinkedQueue这一种，顾名思义ConcurrentLinkedQueue是使用链表作为其数据结构的，使用 CAS 非阻塞算法来实现线程安全（不具备阻塞功能），适合用在对性能要求较高的并发场景。用的相对比较少一些
+  
 * 如何选择适合自己的队列？
   * 边界
   * 空间
@@ -2516,7 +2737,12 @@ public class FinalStringDemo2 {
 
 ## 各并发容器总结
 
-* java.util.concurrent包提供的容器，分为3类：Concurrent、CopyOnWrite、Blocking
+* java.util.concurrent包提供的容器，分为3类：`Concurrent*`、`CopyOnWrite*`、`Blocking*`
+* `Concurrent*`的特点是大部分通过CAS实现并发，而`CopyOnWrite*`则是通过复制一份原数据来实现的，Blocking通过AQS实现的
+
+
+
+
 
 
 
