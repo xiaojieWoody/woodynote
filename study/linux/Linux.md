@@ -618,7 +618,84 @@ chkconfig vsftpd on
 chkconfig vsftpd off
 ```
 
+```shell
+#!/bin/sh
+while [ true ]; do
+/bin/sleep 5
+/bin/date >> /data/algo/date.txt
 
+rsync -au /ad-china/data/store/sw-sage/personal/72/office/ /ad-china/data/store/sw-sage/personal/72/thinpc/ 
+rsync -au /ad-china/data/store/sw-sage/personal/72/thinpc/ /ad-china/data/store/sw-sage/personal/72/debuggingroom/ 
+
+done
+
+
+#!/bin/sh
+while [ true ]; do
+/bin/sleep 5
+path=$1
+files=$(ls $path)
+for filename in $files
+	do
+		rsync -au /1/2/3/ /1/2/33/
+	done
+
+done
+
+
+
+#!/bin/sh
+while [ true ]; do
+/bin/sleep 3
+files=$(ls /ad-china/data/store/sw-sage/personal/)
+for filename in $files
+	do
+		rsync -au /ad-china/data/store/sw-sage/personal/${filename}/office /ad-china/data/store/sw-sage/personal/${filename}/thinpc
+		
+		/bin/sleep 2
+		
+		rsync -au /ad-china/data/store/sw-sage/personal/${filename}/thinpc /ad-china/data/store/sw-sage/personal/${filename}/debugging-room
+		
+		rsync -au /ad-china/data/store/sw-sage/shared/0/office/ /ad-china/data/store/sw-sage/shared/0/thinpc/
+		
+		/bin/sleep 2
+		
+		rsync -au /ad-china/data/store/sw-sage/shared/0/thinpc/ /ad-china/data/store/sw-sage/shared/0/debugging-room/
+				
+	done
+done
+```
+
+
+
+```shell
+#!/bin/sh
+while [ true ]; do
+/bin/sleep 3
+files=$(ls /ad-china/data/store/sw-sage/personal/)
+for filename in $files
+	do
+		rsync -au /ad-china/data/store/sw-sage/personal/275/office/ /ad-china/data/store/sw-sage/personal/275/thinpc/
+		
+		/bin/sleep 3
+		
+    rsync -au /ad-china/data/store/sw-sage/personal/275/thinpc/ /ad-china/data/store/sw-sage/personal/275/debugging-room/
+	done
+done
+```
+
+```shell
+
+#!/bin/sh
+while [ true ]; do
+/bin/sleep 3
+rsync -au /ad-china/data/store/sw-sage/shared/0/office/ /ad-china/data/store/sw-sage/shared/0/thinpc
+/bin/sleep 1		
+rsync -au /ad-china/data/store/sw-sage/shared/0/thinpc/ /ad-china/data/store/sw-sage/shared/0/debugging-room
+done
+
+# nohup sh xx.sh &
+```
 
 
 
